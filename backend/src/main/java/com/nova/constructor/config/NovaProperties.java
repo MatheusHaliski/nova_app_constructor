@@ -7,7 +7,7 @@ import org.springframework.boot.context.properties.bind.DefaultValue;
 
 /** Configurações próprias do NOVA (prefixo {@code nova}). */
 @ConfigurationProperties("nova")
-public record NovaProperties(Jwt jwt, Login login, Cors cors, Admin admin, Connectors connectors,
+public record NovaProperties(Jwt jwt, Login login, Cors cors, Admin admin, Connectors connectors, @DefaultValue Ai ai,
                              @DefaultValue("2026-11") String termsVersion) {
 
     /**
@@ -46,4 +46,11 @@ public record NovaProperties(Jwt jwt, Login login, Cors cors, Admin admin, Conne
 
     /** @param enabled liga o conector; @param url endereço do serviço (sem credenciais, que vêm de segredos) */
     public record Connector(@DefaultValue("false") boolean enabled, String url) {}
+
+    /**
+     * IA do próprio NOVA (Copilot). Sem chave, o Copilot usa regras simples em vez do Claude.
+     *
+     * @param anthropicApiKey chave da API da Anthropic (segredo: ANTHROPIC_API_KEY)
+     */
+    public record Ai(String anthropicApiKey, @DefaultValue("claude-opus-5-5") String model) {}
 }

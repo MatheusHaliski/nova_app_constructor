@@ -163,3 +163,20 @@ export function Toggle({
     </button>
   );
 }
+
+/** Janela modal simples para confirmações e criação rápida. */
+export function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true" aria-label={title}>
+      <div className="w-full max-w-md rounded-2xl border border-border bg-surface p-6 shadow-2xl">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <h3 className="text-lg font-bold">{title}</h3>
+          <button onClick={onClose} aria-label="Fechar" className="rounded-lg p-1 hover:bg-surface-2">
+            <NovaIcon name="close" />
+          </button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
