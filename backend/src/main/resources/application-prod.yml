@@ -1,0 +1,7 @@
+# Produção: chaves JWT obrigatórias (sem par temporário) e logs enxutos.
+nova:
+  jwt:
+    allow-ephemeral-keys: false
+logging:
+  level:
+    root: INFO
