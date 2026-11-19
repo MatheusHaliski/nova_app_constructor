@@ -1,0 +1,100 @@
+@import "tailwindcss";
+
+/*
+ * Identidade NOVA: Montserrat (a fonte do logo) em toda a interface e o degradê do logo
+ * (azul → ciano → verde → amarelo → laranja). As cores são tokens; o tema escuro troca os tokens.
+ */
+:root {
+  --bg: #f6f8fc;
+  --surface: #ffffff;
+  --surface-2: #eef2f9;
+  --border: #dbe2ee;
+  --text: #0f172a;
+  --muted: #5b6577;
+  --primary: #0b5cff;
+  --primary-text: #ffffff;
+  --accent: #00b4e6;
+  --success: #16a34a;
+  --warning: #b45309;
+  --danger: #dc2626;
+  --ring: #0b5cff55;
+  --nova-gradient: linear-gradient(90deg, #0b4dff 0%, #00c8ff 30%, #8cc63f 55%, #f7d11e 75%, #ff8a00 100%);
+  color-scheme: light;
+}
+
+:root.dark {
+  --bg: #0a0f1c;
+  --surface: #111827;
+  --surface-2: #1a2333;
+  --border: #263247;
+  --text: #e8edf6;
+  --muted: #9aa6ba;
+  --primary: #3d7dff;
+  --accent: #22d3ee;
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --danger: #f87171;
+  --ring: #3d7dff66;
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root.theme-system {
+    --bg: #0a0f1c;
+    --surface: #111827;
+    --surface-2: #1a2333;
+    --border: #263247;
+    --text: #e8edf6;
+    --muted: #9aa6ba;
+    --primary: #3d7dff;
+    --accent: #22d3ee;
+    --success: #22c55e;
+    --warning: #f59e0b;
+    --danger: #f87171;
+    --ring: #3d7dff66;
+    color-scheme: dark;
+  }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-primary: var(--primary);
+  --color-primary-text: var(--primary-text);
+  --color-accent: var(--accent);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --font-sans: "Montserrat Variable", ui-sans-serif, system-ui, sans-serif;
+}
+
+html,
+body {
+  background: var(--bg);
+  color: var(--text);
+}
+
+body {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+.nova-gradient-text {
+  background: var(--nova-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.nova-gradient-bar {
+  background: var(--nova-gradient);
+}
+
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}

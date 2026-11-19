@@ -1,0 +1,69 @@
+spring:
+  application:
+    name: nova-backend
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/nova?useUnicode=true&characterEncoding=utf8&connectionTimeZone=UTC}
+    username: ${SPRING_DATASOURCE_USERNAME:nova}
+    password: ${SPRING_DATASOURCE_PASSWORD:}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  flyway:
+    enabled: true
+  threads:
+    virtual:
+      enabled: true
+
+server:
+  port: ${PORT:8080}
+  error:
+    include-message: never
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+nova:
+  terms-version: "2026-11"
+  jwt:
+    issuer: nova-app-constructor
+    access-token-ttl: 15m
+    refresh-token-ttl: 7d
+    key-id: ${NOVA_JWT_KEY_ID:nova-key-1}
+    private-key: ${NOVA_JWT_PRIVATE_KEY:}
+    public-key: ${NOVA_JWT_PUBLIC_KEY:}
+    allow-ephemeral-keys: ${NOVA_JWT_ALLOW_EPHEMERAL_KEYS:true}
+  login:
+    max-failed-attempts: 5
+    lock-duration: 15m
+  cors:
+    allowed-origins: ${NOVA_CORS_ALLOWED_ORIGINS:http://localhost:3000}
+  admin:
+    email: ${NOVA_ADMIN_EMAIL:}
+    password: ${NOVA_ADMIN_PASSWORD:}
+    name: ${NOVA_ADMIN_NAME:Administrador}
+  # MySQL é a fonte central. Os conectores abaixo são opcionais e começam desligados.
+  connectors:
+    redis:
+      enabled: ${NOVA_REDIS_ENABLED:false}
+      url: ${NOVA_REDIS_URL:redis://localhost:6379}
+    opensearch:
+      enabled: ${NOVA_OPENSEARCH_ENABLED:false}
+      url: ${NOVA_OPENSEARCH_URL:http://localhost:9200}
+    s3:
+      enabled: ${NOVA_S3_ENABLED:false}
+      url: ${NOVA_S3_URL:http://localhost:9000}
+    cassandra:
+      enabled: ${NOVA_CASSANDRA_ENABLED:false}
+      url: ${NOVA_CASSANDRA_URL:localhost:9042}
