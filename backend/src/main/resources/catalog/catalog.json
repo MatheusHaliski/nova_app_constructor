@@ -1,0 +1,188 @@
+{
+  "version": "2026-11",
+  "projectTypes": [
+    { "id": "WEB_APP", "name": "Web App", "description": "Site ou sistema web acessado pelo navegador." },
+    { "id": "APP", "name": "App", "description": "Aplicativo com API e cliente próprio (web ou mobile)." }
+  ],
+  "languages": [
+    { "id": "java", "name": "Java", "icon": "openjdk", "versions": ["21", "25", "17"], "defaultVersion": "21", "description": "LTS: 21 (padrão) e 25." },
+    { "id": "typescript", "name": "TypeScript", "icon": "typescript", "versions": ["5.9"], "defaultVersion": "5.9", "description": "Tipagem estática sobre JavaScript." },
+    { "id": "python", "name": "Python", "icon": "python", "versions": ["3.13", "3.12"], "defaultVersion": "3.13", "description": "Linguagem do FastAPI." }
+  ],
+  "backends": [
+    {
+      "id": "spring-boot", "name": "Spring Boot", "icon": "springboot", "status": "available",
+      "description": "Framework Java para APIs: Spring Framework 7, Hibernate 7, Jackson 3.",
+      "languages": ["java"], "versions": ["4.1.2", "4.0.9"], "defaultVersion": "4.1.2",
+      "buildTools": [
+        { "id": "maven", "name": "Maven", "icon": "apachemaven", "build": "./mvnw clean package", "run": "./mvnw spring-boot:run", "test": "./mvnw verify" },
+        { "id": "gradle", "name": "Gradle (Kotlin DSL)", "icon": "gradle", "build": "gradle build", "run": "gradle bootRun", "test": "gradle check" }
+      ],
+      "defaultBuildTool": "maven",
+      "packages": [
+        { "id": "web", "name": "Spring Web MVC", "kind": "dependency", "artifact": "org.springframework.boot:spring-boot-starter-webmvc", "required": true, "description": "Controllers REST e servidor embutido." },
+        { "id": "validation", "name": "Validation", "kind": "dependency", "artifact": "org.springframework.boot:spring-boot-starter-validation", "required": true, "description": "Validação de dados de entrada." },
+        { "id": "actuator", "name": "Actuator", "kind": "dependency", "artifact": "org.springframework.boot:spring-boot-starter-actuator", "default": true, "description": "Health check e métricas." },
+        { "id": "data-jpa", "name": "Spring Data JPA", "kind": "dependency", "artifact": "org.springframework.boot:spring-boot-starter-data-jpa", "default": true, "needs": "database", "description": "Persistência com Hibernate." },
+        { "id": "flyway", "name": "Flyway", "kind": "dependency", "artifact": "org.springframework.boot:spring-boot-starter-flyway", "default": true, "needs": "database", "description": "Migrações versionadas do banco." },
+        { "id": "security", "name": "Spring Security + JWT", "kind": "dependency", "artifact": "org.springframework.boot:spring-boot-starter-oauth2-resource-server", "feature": "auth", "description": "Autenticação e autorização por token JWT." },
+        { "id": "springdoc", "name": "springdoc OpenAPI", "kind": "dependency", "artifact": "org.springdoc:springdoc-openapi-starter-webmvc-ui:3.2.0", "feature": "openapi", "description": "Documentação OpenAPI e Swagger UI." },
+        { "id": "devtools", "name": "DevTools", "kind": "dependency", "artifact": "org.springframework.boot:spring-boot-devtools", "scope": "runtime", "description": "Recarregamento automático em desenvolvimento." },
+        { "id": "mail", "name": "Envio de e-mail", "kind": "dependency", "artifact": "org.springframework.boot:spring-boot-starter-mail", "description": "Cliente SMTP." },
+        { "id": "cache", "name": "Cache", "kind": "dependency", "artifact": "org.springframework.boot:spring-boot-starter-cache", "description": "Abstração de cache." },
+        { "id": "lombok", "name": "Lombok", "kind": "dependency", "artifact": "org.projectlombok:lombok", "scope": "provided", "description": "Reduz código repetitivo com anotações." },
+        { "id": "test", "name": "Spring Boot Test", "kind": "dependency", "artifact": "org.springframework.boot:spring-boot-starter-webmvc-test", "scope": "test", "feature": "tests", "description": "JUnit 5, MockMvc e AssertJ." },
+        { "id": "boot-plugin", "name": "Spring Boot Plugin", "kind": "plugin", "artifact": "org.springframework.boot:spring-boot-maven-plugin", "required": true, "description": "Empacota o jar executável e gera imagens." },
+        { "id": "jacoco", "name": "JaCoCo", "kind": "plugin", "artifact": "org.jacoco:jacoco-maven-plugin:0.8.16", "description": "Cobertura de testes." },
+        { "id": "spotless", "name": "Spotless", "kind": "plugin", "artifact": "com.diffplug.spotless:spotless-maven-plugin:3.11.0", "buildTools": ["maven"], "description": "Formatação automática do código." }
+      ]
+    },
+    {
+      "id": "nestjs", "name": "NestJS", "icon": "nestjs", "status": "available",
+      "description": "Backend modular em TypeScript sobre Node.js.",
+      "languages": ["typescript"], "versions": ["12.5.1"], "defaultVersion": "12.5.1",
+      "buildTools": [
+        { "id": "npm", "name": "npm", "icon": "npm", "build": "npm run build", "run": "npm run start:dev", "test": "npm test" },
+        { "id": "pnpm", "name": "pnpm", "icon": "pnpm", "build": "pnpm build", "run": "pnpm start:dev", "test": "pnpm test" }
+      ],
+      "defaultBuildTool": "npm",
+      "packages": [
+        { "id": "core", "name": "@nestjs/core", "kind": "dependency", "artifact": "@nestjs/core@^12.5.1", "required": true, "description": "Núcleo do NestJS." },
+        { "id": "common", "name": "@nestjs/common", "kind": "dependency", "artifact": "@nestjs/common@^12.5.1", "required": true, "description": "Decorators e utilitários." },
+        { "id": "platform-express", "name": "@nestjs/platform-express", "kind": "dependency", "artifact": "@nestjs/platform-express@^12.5.1", "required": true, "description": "Servidor HTTP." },
+        { "id": "reflect-metadata", "name": "reflect-metadata", "kind": "dependency", "artifact": "reflect-metadata@^0.2.2", "required": true, "description": "Metadados para decorators." },
+        { "id": "rxjs", "name": "rxjs", "kind": "dependency", "artifact": "rxjs@^7.8.2", "required": true, "description": "Programação reativa usada pelo Nest." },
+        { "id": "config", "name": "@nestjs/config", "kind": "dependency", "artifact": "@nestjs/config@^12.1.1", "default": true, "description": "Configuração por variáveis de ambiente." },
+        { "id": "validation", "name": "class-validator", "kind": "dependency", "artifact": "class-validator@^0.15.1,class-transformer@^0.5.1", "default": true, "description": "Validação de DTOs." },
+        { "id": "typeorm", "name": "TypeORM", "kind": "dependency", "artifact": "@nestjs/typeorm@^12.0.3,typeorm@^1.1.3", "default": true, "needs": "database", "description": "ORM e migrações." },
+        { "id": "swagger", "name": "@nestjs/swagger", "kind": "dependency", "artifact": "@nestjs/swagger@^12.1.2", "feature": "openapi", "description": "Documentação OpenAPI." },
+        { "id": "jwt", "name": "JWT + Passport", "kind": "dependency", "artifact": "@nestjs/jwt@^12.0.5,@nestjs/passport@^12.0.2,passport-jwt@^4.0.1,bcryptjs@^3.0.3", "feature": "auth", "description": "Autenticação por token." },
+        { "id": "cli", "name": "@nestjs/cli", "kind": "plugin", "artifact": "@nestjs/cli@^12.0.13", "required": true, "description": "Compilação e modo de desenvolvimento." },
+        { "id": "typescript", "name": "TypeScript", "kind": "plugin", "artifact": "typescript@^5.9.3,@types/node@^22", "required": true, "description": "Compilador." }
+      ]
+    },
+    {
+      "id": "fastapi", "name": "FastAPI", "icon": "fastapi", "status": "available",
+      "description": "APIs Python assíncronas com tipagem.",
+      "languages": ["python"], "versions": ["0.165.0"], "defaultVersion": "0.165.0",
+      "buildTools": [
+        { "id": "uv", "name": "uv", "icon": "uv", "build": "uv sync", "run": "uv run uvicorn app.main:app --reload", "test": "uv run pytest" },
+        { "id": "pip", "name": "pip", "icon": "pypi", "build": "pip install -e .", "run": "uvicorn app.main:app --reload", "test": "pytest" }
+      ],
+      "defaultBuildTool": "uv",
+      "packages": [
+        { "id": "fastapi", "name": "fastapi", "kind": "dependency", "artifact": "fastapi>=0.165.0", "required": true, "description": "Framework web." },
+        { "id": "uvicorn", "name": "uvicorn", "kind": "dependency", "artifact": "uvicorn[standard]>=0.54.0", "required": true, "description": "Servidor ASGI." },
+        { "id": "settings", "name": "pydantic-settings", "kind": "dependency", "artifact": "pydantic-settings>=2.16.3", "default": true, "description": "Configuração por variáveis de ambiente." },
+        { "id": "sqlalchemy", "name": "SQLAlchemy", "kind": "dependency", "artifact": "sqlalchemy>=2.1.9", "default": true, "needs": "database", "description": "ORM." },
+        { "id": "alembic", "name": "Alembic", "kind": "dependency", "artifact": "alembic>=1.20.1", "default": true, "needs": "database", "description": "Migrações do banco." },
+        { "id": "jwt", "name": "PyJWT", "kind": "dependency", "artifact": "pyjwt[crypto]>=2.15.1", "feature": "auth", "description": "Tokens JWT." },
+        { "id": "pytest", "name": "pytest", "kind": "plugin", "artifact": "pytest>=8,httpx>=0.28", "feature": "tests", "description": "Testes." }
+      ]
+    },
+    { "id": "dotnet", "name": ".NET", "icon": "dotnet", "status": "planned", "description": "Web API em C#.", "languages": [], "versions": [], "buildTools": [], "packages": [] },
+    { "id": "django", "name": "Django", "icon": "django", "status": "planned", "description": "Backend Python com apps e ORM.", "languages": [], "versions": [], "buildTools": [], "packages": [] },
+    { "id": "laravel", "name": "Laravel", "icon": "laravel", "status": "planned", "description": "Backend PHP MVC.", "languages": [], "versions": [], "buildTools": [], "packages": [] },
+    { "id": "go", "name": "Go", "icon": "go", "status": "planned", "description": "Serviços compilados.", "languages": [], "versions": [], "buildTools": [], "packages": [] }
+  ],
+  "frontends": [
+    {
+      "id": "nextjs", "name": "Next.js", "icon": "nextdotjs", "status": "available",
+      "description": "React com App Router e renderização no servidor.",
+      "versions": ["16.4.6"], "defaultVersion": "16.4.6",
+      "buildTools": [ { "id": "npm", "name": "npm", "icon": "npm", "build": "npm run build", "run": "npm run dev", "test": "npm run lint" } ],
+      "defaultBuildTool": "npm",
+      "packages": [
+        { "id": "next", "name": "next", "kind": "dependency", "artifact": "next@16.4.6", "required": true, "description": "Framework." },
+        { "id": "react", "name": "react", "kind": "dependency", "artifact": "react@19.3.1,react-dom@19.3.1", "required": true, "description": "Biblioteca de interface." },
+        { "id": "typescript", "name": "TypeScript", "kind": "plugin", "artifact": "typescript@^5.9.3,@types/react@^19,@types/react-dom@^19,@types/node@^22", "required": true, "description": "Compilador e tipos." },
+        { "id": "tailwind", "name": "Tailwind CSS", "kind": "dependency", "artifact": "tailwindcss@^4.3.5,@tailwindcss/postcss@^4.3.5", "default": true, "description": "Estilos utilitários." },
+        { "id": "zod", "name": "Zod", "kind": "dependency", "artifact": "zod@^4.6.7", "description": "Validação de formulários e dados." },
+        { "id": "three", "name": "Three.js / React Three Fiber", "kind": "dependency", "artifact": "three@^0.187.0,@react-three/fiber@^9.8.2,@types/three@^0.187.0", "description": "Cenas 3D." }
+      ]
+    },
+    {
+      "id": "react-vite", "name": "React + Vite", "icon": "vite", "status": "available",
+      "description": "SPA em React com build rápido.",
+      "versions": ["8.3.8"], "defaultVersion": "8.3.8",
+      "buildTools": [ { "id": "npm", "name": "npm", "icon": "npm", "build": "npm run build", "run": "npm run dev", "test": "npm run build" } ],
+      "defaultBuildTool": "npm",
+      "packages": [
+        { "id": "react", "name": "react", "kind": "dependency", "artifact": "react@19.3.1,react-dom@19.3.1", "required": true, "description": "Biblioteca de interface." },
+        { "id": "vite", "name": "Vite", "kind": "plugin", "artifact": "vite@^8.3.8,@vitejs/plugin-react@^6.3.0", "required": true, "description": "Servidor de desenvolvimento e build." },
+        { "id": "typescript", "name": "TypeScript", "kind": "plugin", "artifact": "typescript@^5.9.3,@types/react@^19,@types/react-dom@^19", "required": true, "description": "Compilador e tipos." },
+        { "id": "zod", "name": "Zod", "kind": "dependency", "artifact": "zod@^4.6.7", "description": "Validação de formulários e dados." }
+      ]
+    },
+    { "id": "angular", "name": "Angular", "icon": "angular", "status": "planned", "description": "Frontend com componentes standalone.", "versions": [], "buildTools": [], "packages": [] },
+    { "id": "vue", "name": "Vue / Nuxt", "icon": "vuedotjs", "status": "planned", "description": "Frontend progressivo.", "versions": [], "buildTools": [], "packages": [] },
+    { "id": "flutter", "name": "Flutter", "icon": "flutter", "status": "planned", "description": "Apps móveis multiplataforma.", "versions": [], "buildTools": [], "packages": [] },
+    { "id": "expo", "name": "React Native / Expo", "icon": "expo", "status": "planned", "description": "Apps móveis em React.", "versions": [], "buildTools": [], "packages": [] }
+  ],
+  "databases": [
+    {
+      "id": "mysql", "name": "MySQL", "icon": "mysql", "status": "available", "versions": ["8.4", "9.7"], "defaultVersion": "8.4",
+      "description": "Banco relacional (padrão do NOVA).", "image": "mysql", "port": 3306,
+      "packages": {
+        "spring-boot": ["com.mysql:mysql-connector-j|runtime", "org.flywaydb:flyway-mysql"],
+        "nestjs": ["mysql2@^3.24.6"],
+        "fastapi": ["pymysql>=1.2.4"]
+      }
+    },
+    {
+      "id": "postgresql", "name": "PostgreSQL", "icon": "postgresql", "status": "available", "versions": ["18", "17"], "defaultVersion": "18",
+      "description": "Banco relacional.", "image": "postgres", "port": 5432,
+      "packages": {
+        "spring-boot": ["org.postgresql:postgresql|runtime", "org.flywaydb:flyway-database-postgresql"],
+        "nestjs": ["pg@^8.23.1"],
+        "fastapi": ["psycopg[binary]>=3.3.9"]
+      }
+    },
+    { "id": "mongodb", "name": "MongoDB", "icon": "mongodb", "status": "planned", "versions": [], "description": "Banco de documentos.", "packages": {} }
+  ],
+  "connectors": [
+    {
+      "id": "redis", "name": "Redis", "icon": "redis", "description": "Cache, cotas e contadores.", "image": "redis:7.4-alpine", "port": 6379,
+      "env": [ { "name": "REDIS_URL", "example": "redis://localhost:6379", "secret": false } ],
+      "packages": { "spring-boot": ["org.springframework.boot:spring-boot-starter-data-redis"], "nestjs": ["ioredis@^5.11.1"], "fastapi": ["redis>=8.1.0"] }
+    },
+    {
+      "id": "opensearch", "name": "OpenSearch", "icon": "opensearch", "description": "Busca textual.", "image": "opensearchproject/opensearch:2.19.1", "port": 9200,
+      "env": [ { "name": "OPENSEARCH_URL", "example": "http://localhost:9200", "secret": false } ],
+      "packages": { "spring-boot": ["org.opensearch.client:opensearch-java:3.11.0", "org.apache.httpcomponents.client5:httpclient5"], "nestjs": ["@opensearch-project/opensearch@^3.10.0"], "fastapi": ["opensearch-py>=3.2.0"] }
+    },
+    {
+      "id": "s3", "name": "S3 / MinIO", "icon": "minio", "description": "Armazenamento de arquivos e mídia.", "image": "minio/minio", "port": 9000,
+      "env": [
+        { "name": "S3_ENDPOINT", "example": "http://localhost:9000", "secret": false },
+        { "name": "S3_BUCKET", "example": "app", "secret": false },
+        { "name": "S3_ACCESS_KEY", "example": "", "secret": true },
+        { "name": "S3_SECRET_KEY", "example": "", "secret": true }
+      ],
+      "packages": { "spring-boot": ["software.amazon.awssdk:s3:2.59.4"], "nestjs": ["@aws-sdk/client-s3@^3.1172.0"], "fastapi": ["boto3>=1.44.6"] }
+    },
+    {
+      "id": "cassandra", "name": "Cassandra", "icon": "apachecassandra", "description": "Timeline e dados com TTL.", "image": "cassandra:5.0", "port": 9042,
+      "env": [ { "name": "CASSANDRA_CONTACT_POINTS", "example": "localhost:9042", "secret": false } ],
+      "packages": { "spring-boot": ["org.springframework.boot:spring-boot-starter-data-cassandra"], "nestjs": ["cassandra-driver@^4.10.0"], "fastapi": ["cassandra-driver>=3.30.1"] }
+    }
+  ],
+  "aiProviders": [
+    {
+      "id": "anthropic", "name": "Claude (Anthropic)", "icon": "anthropic", "status": "available",
+      "description": "IA externa para o app gerado.",
+      "models": ["claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5"], "defaultModel": "claude-opus-5-5",
+      "env": [ { "name": "ANTHROPIC_API_KEY", "example": "", "secret": true } ],
+      "packages": { "spring-boot": ["com.anthropic:anthropic-java:3.10.0"], "nestjs": ["@anthropic-ai/sdk@^1.10.0"], "fastapi": ["anthropic>=2.10.0"] }
+    },
+    { "id": "openai", "name": "OpenAI", "icon": "openai", "status": "planned", "description": "Em breve.", "models": [], "env": [], "packages": {} },
+    { "id": "gemini", "name": "Gemini", "icon": "googlegemini", "status": "planned", "description": "Em breve.", "models": [], "env": [], "packages": {} }
+  ],
+  "features": [
+    { "id": "auth", "name": "Autenticação com token (JWT)", "description": "Login, cadastro e rotas protegidas.", "default": false },
+    { "id": "openapi", "name": "Documentação da API (OpenAPI)", "description": "Contrato e Swagger UI.", "default": true },
+    { "id": "docker", "name": "Docker e docker-compose", "description": "Imagens e ambiente local com o banco.", "default": true },
+    { "id": "ci", "name": "CI no GitHub Actions", "description": "Build e testes a cada push.", "default": false },
+    { "id": "tests", "name": "Testes automatizados", "description": "Estrutura e teste inicial.", "default": true }
+  ]
+}

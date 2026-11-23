@@ -7,8 +7,8 @@ página "Em construção" com o RF e a fase prevista.
 | Fase | Entrega | RFs / HUs principais | Situação |
 |---|---|---|---|
 | 1 | Fundação: autenticação, cadastro, controle de acesso, configurações do perfil (LGPD), marca e catálogo de tecnologias | Cartões [Infra], [Backend], [Frontend]; RF-3.05 (LGPD); RF-4.04/4.25 (acervo e fichas) | **Concluída** |
-| 2 | Meus projetos: salvar, página do projeto, árvore de arquivos, editor, versões, download | RF-2.01 a RF-2.06, RF-2.08, RF-2.10 | Próxima |
-| 3 | Criar app: formulário (Copilot total ou assistido), stack com ícones, telas, autenticação opcional, IA e acervo RAG | Cartões [Obj 1] | Planejada |
+| 2 | Meus projetos: salvar, página do projeto, árvore de arquivos, editor, versões, download | RF-2.01 a RF-2.06, RF-2.08, RF-2.10 | **Entregue (base)** |
+| 3 | Criar app: formulário (Copilot total ou assistido), stack com ícones, telas, autenticação opcional, IA e acervo RAG | Cartões [Obj 1] | **Entregue (estrutura)** |
 | 4 | Rede NOVA: visibilidade, compartilhamento, feed, explorar, fork, comentários, notificações, moderação | RF-3.01 a RF-3.04 | Planejada |
 | 5 | Abstração visual do backend e do frontend | RF-4.01 a RF-4.35 (MVP) | Planejada |
 | 6 | Integrações (git, IDE, CLI/API), execução em sandbox, deploy e conectores opcionais | RF-2.07, RF-2.09 | Planejada |
@@ -29,3 +29,33 @@ página "Em construção" com o RF e a fase prevista.
 - Marca redesenhada em SVG a partir do logo do Trello; interface em Montserrat (fonte identificada no logo) e ícones próprios no mesmo estilo geométrico, com o degradê da marca no item ativo.
 - Configurações: Conta, Privacidade, Aparência (tema claro/escuro/sistema), Idioma (pt-BR, en-US, es-ES) e Seus dados, cada controle com a etiqueta do artigo da LGPD.
 - Catálogo de tecnologias com ícones e busca (base para formulários de stack e para o feed).
+
+## Fases 2 e 3 — o que foi entregue
+
+**Catálogo de tecnologias** (`backend/src/main/resources/catalog/catalog.json`, `GET /api/v1/catalog`)
+- Fonte única do formulário, do Copilot e do gerador: linguagens e versões, frameworks e versões, ferramentas de build com os comandos de compilar/rodar/testar, pacotes e plugins de cada framework, bancos e versões, conectores opcionais e provedores de IA.
+- Geradores disponíveis: Spring Boot (Maven ou Gradle), NestJS, FastAPI, Next.js e React + Vite. As demais stacks aparecem no formulário como "em breve".
+- As versões do catálogo foram conferidas no Maven Central, npm e PyPI em 19/11/2026.
+
+**Gerador** (`POST /api/v1/generator/plan` e `/generator/projects`)
+- Valida as escolhas contra o catálogo (existência, disponibilidade, compatibilidade linguagem × framework × build), preenche os padrões e resolve dependências, plugins e variáveis de ambiente, com o motivo de cada pacote.
+- Gera a estrutura inicial: build, aplicação, configuração por variáveis (sem segredos no código), migração inicial, autenticação JWT, conectores, IA externa, testes, Dockerfile, docker-compose, CI, README com "como compilar" e o manifesto `nova.json`.
+- Verificado com build real dos projetos gerados: Spring Boot/Maven (todos os conectores, autenticação e IA), Spring Boot/Gradle, NestJS, Next.js e React + Vite. O FastAPI teve só a sintaxe conferida.
+
+**Copilot** (`/api/v1/copilot`)
+- Copilot total: da ideia em texto para a proposta completa (nome, objetivo, tecnologias, recursos, telas, requisitos e backlog), com saída estruturada do Claude (`claude-opus-5-5`) validada pelo catálogo.
+- Assistido: sugestão por campo (descrição, objetivo, telas, requisitos).
+- Sem `ANTHROPIC_API_KEY`, ou se a IA falhar ou recusar, o Copilot usa regras simples por palavras-chave e avisa o usuário.
+
+**Projetos** (`/api/v1/projects`)
+- Projeto nasce privado; projetos de outras pessoas respondem 404.
+- Cada alteração cria uma versão imutável; salvar exige a versão base (conflito 409 se alguém alterou antes); restaurar cria nova versão.
+- Criar, editar, mover e excluir arquivos e pastas com validação de caminho; aviso de credenciais ao salvar.
+- Download em ZIP ou tar.gz do projeto, de uma pasta ou de uma versão, sem arquivos `.env`, com checksum SHA-256.
+- Arquivar, lixeira com restauração e exclusão definitiva com confirmação pelo nome; limites de tamanho e de arquivos.
+
+**Frontend**
+- `/novo-app`: formulário em etapas (Modo, Projeto, Tecnologias, Pacotes e conectores, Telas, Revisão) com os ícones das tecnologias.
+- `/projetos` e `/projetos/[id]`: lista com selos de stack, ficha técnica, árvore de arquivos com editor, versões e configurações.
+
+**Ainda não feito nestas fases:** editor com realce de sintaxe, comparação (diff) entre versões, upload de arquivos, salvamento automático, backlog e diagramas gerados, editor visual de telas (ScreenSpec), acervo RAG, textos do formulário e dos projetos em inglês e espanhol.

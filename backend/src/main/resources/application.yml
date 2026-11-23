@@ -67,3 +67,7 @@ nova:
     cassandra:
       enabled: ${NOVA_CASSANDRA_ENABLED:false}
       url: ${NOVA_CASSANDRA_URL:localhost:9042}
+  # Copilot do NOVA. Sem ANTHROPIC_API_KEY, as sugestões vêm de regras simples.
+  ai:
+    anthropic-api-key: ${ANTHROPIC_API_KEY:}
+    model: ${NOVA_AI_MODEL:claude-opus-5-5}

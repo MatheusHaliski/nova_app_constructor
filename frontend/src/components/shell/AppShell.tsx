@@ -227,6 +227,13 @@ function SideNav({
   onNavigate: () => void;
 }) {
   const width = collapsed ? "lg:w-[72px]" : "lg:w-64";
+  // Um único item ativo: o primeiro cujo caminho bate com a página atual (vários itens podem apontar para a mesma tela).
+  const activeSlug = nav
+    .flatMap((g) => g.items)
+    .find((item) => {
+      const path = item.href.split("?")[0].replace(/\/conta$/, "");
+      return pathname === path || (path !== "/painel" && pathname.startsWith(`${path}/`)) || pathname === `/em-breve/${item.slug}`;
+    })?.slug;
   return (
     <aside
       className={`fixed inset-y-0 left-0 z-40 w-72 transform border-r border-border bg-surface transition-transform lg:sticky lg:top-[60px] lg:h-[calc(100vh-60px)] lg:translate-x-0 ${width} ${
@@ -256,10 +263,7 @@ function SideNav({
               )}
               <ul className="flex flex-col gap-0.5">
                 {group.items.map((item) => {
-                  const active =
-                    pathname === item.href ||
-                    (item.href !== "/painel" && pathname.startsWith(item.href.replace(/\/conta$/, ""))) ||
-                    pathname === `/em-breve/${item.slug}`;
+                  const active = item.slug === activeSlug;
                   return (
                     <li key={item.slug}>
                       <Link

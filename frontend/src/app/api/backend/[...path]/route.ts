@@ -7,7 +7,7 @@ import { rejectCrossOrigin } from "@/lib/csrf";
  * Ponte autenticada para os componentes do navegador: anexa o access token (cookie httpOnly) e repassa
  * a chamada ao backend. Só libera os grupos de rota usados pela interface.
  */
-const ALLOWED = ["me", "admin"];
+const ALLOWED = ["me", "admin", "catalog", "generator", "copilot", "projects"];
 
 async function forward(request: Request, ctx: RouteContext<"/api/backend/[...path]">) {
   if (request.method !== "GET") {

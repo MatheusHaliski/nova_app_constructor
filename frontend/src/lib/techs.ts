@@ -105,3 +105,15 @@ export const TECHS: Tech[] = [
 export const CATEGORY_ORDER: TechCategory[] = [
   "linguagem", "backend", "frontend", "mobile", "banco", "conector", "api", "ia", "infra", "qualidade",
 ];
+
+export type IconData = { path: string; hex: string };
+
+/** Ícones (Simple Icons) para uma lista de slugs do catálogo do backend; slugs sem logo livre ficam de fora. */
+export function iconsFor(slugs: Iterable<string>): Record<string, IconData> {
+  const out: Record<string, IconData> = {};
+  for (const slug of slugs) {
+    const found = icon(slug);
+    if (found) out[slug] = found;
+  }
+  return out;
+}

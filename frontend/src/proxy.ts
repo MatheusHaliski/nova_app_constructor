@@ -13,7 +13,7 @@ import type { NextRequest } from "next/server";
 const ACCESS = "nova_at";
 const REFRESH = "nova_rt";
 const API_URL = process.env.NOVA_API_URL ?? "http://localhost:8080";
-const PRIVATE = ["/painel", "/configuracoes", "/admin", "/tecnologias", "/em-breve", "/notificacoes", "/api/backend", "/api/preferences"];
+const PRIVATE = ["/novo-app", "/projetos", "/painel", "/configuracoes", "/admin", "/tecnologias", "/em-breve", "/notificacoes", "/api/backend", "/api/preferences"];
 const GUEST_ONLY = ["/login", "/cadastro"];
 
 function matches(path: string, prefixes: string[]) {
