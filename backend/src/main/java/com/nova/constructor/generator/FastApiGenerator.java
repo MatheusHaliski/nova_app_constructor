@@ -9,6 +9,71 @@ import org.springframework.stereotype.Component;
 @Component
 public class FastApiGenerator implements StackGenerator {
 
+    private static final String AUTH = """
+            \"\"\"Autenticação por token JWT.
+
+            Login inicial com o usuário administrador das variáveis APP_ADMIN_USER e APP_ADMIN_PASSWORD.
+            Para proteger uma rota, use ``Depends(require_user)``.
+            \"\"\"
+            import hmac
+            from datetime import datetime, timedelta, timezone
+
+            import jwt
+            from fastapi import APIRouter, Depends, HTTPException, status
+            from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+            from pydantic import BaseModel
+
+            from app.config import env
+
+            TTL = timedelta(minutes=30)
+            router = APIRouter(prefix="/api/auth", tags=["auth"])
+            bearer = HTTPBearer(auto_error=False)
+
+
+            def secret() -> str:
+                value = env("JWT_SECRET")
+                if len(value) < 32:
+                    raise RuntimeError("JWT_SECRET precisa ter pelo menos 32 caracteres.")
+                return value
+
+
+            class LoginRequest(BaseModel):
+                username: str
+                password: str
+
+
+            @router.post("/token")
+            def token(body: LoginRequest) -> dict[str, str | int]:
+                valid = hmac.compare_digest(body.username.encode(), env("APP_ADMIN_USER").encode()) and hmac.compare_digest(
+                    body.password.encode(), env("APP_ADMIN_PASSWORD").encode()
+                )
+                if not valid:
+                    raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Usuário ou senha inválidos.")
+                now = datetime.now(timezone.utc)
+                claims = {"sub": body.username, "scope": "admin", "iat": now, "exp": now + TTL}
+                return {
+                    "accessToken": jwt.encode(claims, secret(), algorithm="HS256"),
+                    "tokenType": "Bearer",
+                    "expiresIn": int(TTL.total_seconds()),
+                }
+
+
+            def require_user(credentials: HTTPAuthorizationCredentials | None = Depends(bearer)) -> dict:
+                \"\"\"Dependência para rotas protegidas: valida o token e devolve as claims.\"\"\"
+                if credentials is None:
+                    raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Faça login para continuar.")
+                try:
+                    return jwt.decode(credentials.credentials, secret(), algorithms=["HS256"])
+                except jwt.PyJWTError as error:
+                    raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Token inválido ou expirado.") from error
+
+
+            @router.get("/me")
+            def me(user: dict = Depends(require_user)) -> dict:
+                \"\"\"Exemplo de rota protegida: devolve os dados do token de quem chamou.\"\"\"
+                return user
+            """;
+
     @Override
     public String id() {
         return "fastapi";
@@ -54,17 +119,23 @@ public class FastApiGenerator implements StackGenerator {
                         raise RuntimeError(f"Defina a variável de ambiente {name}.")
                     return value
                 """);
+        boolean auth = spec.hasFeature("auth");
+        if (auth) {
+            files.put(root + "app/auth.py", AUTH);
+        }
         files.put(root + "app/main.py", Tpl.fill("""
                 from fastapi import FastAPI
-
+                {{authImport}}
                 app = FastAPI(title={{name}}, version="0.1.0")
-
+                {{authRouter}}
 
                 @app.get("/api/status")
                 def status() -> dict[str, str]:
                     \"\"\"Endpoint público de verificação: confirma que a API está no ar.\"\"\"
                     return {"app": {{name}}, "status": "ok"}
-                """, Map.of("name", Tpl.jsonString(spec.name()))));
+                """, Map.of("name", Tpl.jsonString(spec.name()),
+                "authImport", auth ? "\nfrom app import auth\n" : "",
+                "authRouter", auth ? "app.include_router(auth.router)\n" : "")));
         if (database) {
             files.put(root + "app/db.py", """
                     \"\"\"Conexão com o banco. A URL, o usuário e a senha vêm de variáveis de ambiente.\"\"\"

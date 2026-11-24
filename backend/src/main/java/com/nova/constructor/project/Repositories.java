@@ -42,7 +42,9 @@ final class Repositories {
         @Query("delete from FileBlob b where not exists (select 1 from VersionFile f where f.blobSha = b.sha256)")
         int deleteOrphans();
 
-        @Query("select coalesce(sum(v.sizeBytes), 0) from ProjectVersion v, Project p where v.projectId = p.id and v.number = p.currentVersion and p.ownerId = :ownerId")
+        /** Bytes realmente guardados para um dono: cada conteúdo distinto conta uma vez, em todas as versões. */
+        @Query("select coalesce(sum(b.sizeBytes), 0) from FileBlob b where exists (select 1 from VersionFile f, ProjectVersion v, Project p "
+                + "where f.blobSha = b.sha256 and f.versionId = v.id and v.projectId = p.id and p.ownerId = :ownerId)")
         long storageUsedBy(@Param("ownerId") UUID ownerId);
     }
 }

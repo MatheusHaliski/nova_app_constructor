@@ -219,6 +219,45 @@ class GeneratorAndProjectsIntegrationTest {
     }
 
     @Test
+    void novoArquivoNaoSobrescreveExistenteECaminhoLongoNaoQuebraORotulo() throws Exception {
+        String auth = token();
+        String id = createProject(auth, MINIMAL_SPEC);
+        mvc.perform(put("/api/v1/projects/" + id + "/file").header("Authorization", auth).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"path\":\"README.md\",\"content\":\"\",\"baseVersion\":1,\"createOnly\":true}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.detail", containsString("Já existe um arquivo")));
+        assertThat(fileContent(auth, id, "README.md")).contains("API Simples");
+
+        String longPath = "docs/" + "pasta-com-nome-bem-comprido/".repeat(8) + "arquivo.txt";
+        mvc.perform(put("/api/v1/projects/" + id + "/file").header("Authorization", auth).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"path\":\"" + longPath + "\",\"content\":\"x\",\"baseVersion\":1,\"createOnly\":true}"))
+                .andExpect(status().isOk());
+        mvc.perform(post("/api/v1/projects/" + id + "/files/move").header("Authorization", auth).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"from\":\"" + longPath + "\",\"to\":\"" + longPath.replace("arquivo", "renomeado") + "\",\"baseVersion\":2}"))
+                .andExpect(status().isOk());
+        mvc.perform(get("/api/v1/projects/" + id + "/versions").header("Authorization", auth))
+                .andExpect(jsonPath("$[0].label", org.hamcrest.Matchers.hasLength(120)));
+    }
+
+    @Test
+    void autenticacaoEGeradaTambemParaNestEFastApi() throws Exception {
+        String auth = token();
+        String nest = createProject(auth, "{\"name\":\"Nest Auth\",\"type\":\"APP\",\"backend\":{\"id\":\"nestjs\"},\"features\":[\"auth\"]}");
+        assertThat(fileContent(auth, nest, "backend/src/app.module.ts")).contains("AuthModule");
+        assertThat(fileContent(auth, nest, "backend/src/auth/jwt-auth.guard.ts")).contains("UnauthorizedException");
+        assertThat(fileContent(auth, nest, "backend/src/auth/auth.controller.ts")).contains("@Post('token')");
+        assertThat(fileContent(auth, nest, "backend/src/status.controller.ts")).contains("@Public()");
+        assertThat(fileContent(auth, nest, "backend/package.json")).contains("\"@nestjs/jwt\"").doesNotContain("passport");
+
+        String fast = createProject(auth, "{\"name\":\"Fast Auth\",\"type\":\"APP\",\"backend\":{\"id\":\"fastapi\"},\"features\":[\"auth\"]}");
+        assertThat(fileContent(auth, fast, "backend/app/main.py")).contains("app.include_router(auth.router)");
+        assertThat(fileContent(auth, fast, "backend/app/auth.py")).contains("def require_user", "@router.post(\"/token\")");
+
+        String semAuth = createProject(auth, "{\"name\":\"Nest Livre\",\"type\":\"APP\",\"backend\":{\"id\":\"nestjs\"},\"features\":[]}");
+        assertThat(fileContent(auth, semAuth, "backend/src/status.controller.ts")).doesNotContain("Public");
+    }
+
+    @Test
     void downloadZipNaoLevaArquivosDeSegredo() throws Exception {
         String auth = token();
         String id = createProject(auth, MINIMAL_SPEC);

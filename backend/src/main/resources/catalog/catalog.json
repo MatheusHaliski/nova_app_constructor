@@ -56,7 +56,7 @@
         { "id": "validation", "name": "class-validator", "kind": "dependency", "artifact": "class-validator@^0.15.1,class-transformer@^0.5.1", "default": true, "description": "Validação de DTOs." },
         { "id": "typeorm", "name": "TypeORM", "kind": "dependency", "artifact": "@nestjs/typeorm@^12.0.3,typeorm@^1.1.3", "default": true, "needs": "database", "description": "ORM e migrações." },
         { "id": "swagger", "name": "@nestjs/swagger", "kind": "dependency", "artifact": "@nestjs/swagger@^12.1.2", "feature": "openapi", "description": "Documentação OpenAPI." },
-        { "id": "jwt", "name": "JWT + Passport", "kind": "dependency", "artifact": "@nestjs/jwt@^12.0.5,@nestjs/passport@^12.0.2,passport-jwt@^4.0.1,bcryptjs@^3.0.3", "feature": "auth", "description": "Autenticação por token." },
+        { "id": "jwt", "name": "@nestjs/jwt", "kind": "dependency", "artifact": "@nestjs/jwt@^12.0.5", "feature": "auth", "description": "Autenticação por token." },
         { "id": "cli", "name": "@nestjs/cli", "kind": "plugin", "artifact": "@nestjs/cli@^12.0.13", "required": true, "description": "Compilação e modo de desenvolvimento." },
         { "id": "typescript", "name": "TypeScript", "kind": "plugin", "artifact": "typescript@^5.9.3,@types/node@^22", "required": true, "description": "Compilador." }
       ]

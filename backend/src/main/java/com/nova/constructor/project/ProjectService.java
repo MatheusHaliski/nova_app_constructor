@@ -1,6 +1,7 @@
 package com.nova.constructor.project;
 
 import com.nova.constructor.common.ApiException;
+import com.nova.constructor.config.NovaProperties;
 import com.nova.constructor.generator.GeneratorService.Generated;
 import com.nova.constructor.project.ProjectDtos.ChangeResult;
 import com.nova.constructor.project.ProjectDtos.FileContent;
@@ -49,7 +50,6 @@ public class ProjectService {
     static final int MAX_FILES = 800;
     static final long MAX_FILE_BYTES = 1024 * 1024;
     static final long MAX_PROJECT_BYTES = 20L * 1024 * 1024;
-    static final long STORAGE_LIMIT_BYTES = 200L * 1024 * 1024;
 
     public record Archive(String fileName, String contentType, byte[] bytes, String sha256) {}
 
@@ -59,24 +59,23 @@ public class ProjectService {
     private final BlobRepository blobs;
     private final JsonMapper mapper;
     private final Clock clock;
+    private final long storageLimitBytes;
 
     public ProjectService(ProjectRepository projects, VersionRepository versions, VersionFileRepository versionFiles,
-                          BlobRepository blobs, JsonMapper mapper, Clock clock) {
+                          BlobRepository blobs, JsonMapper mapper, Clock clock, NovaProperties props) {
         this.projects = projects;
         this.versions = versions;
         this.versionFiles = versionFiles;
         this.blobs = blobs;
         this.mapper = mapper;
         this.clock = clock;
+        this.storageLimitBytes = props.projects().storageLimit().toBytes();
     }
 
     // ---------------- criação e consulta ----------------
 
     @Transactional
     public ProjectSummary createFromGenerated(UUID ownerId, Generated generated) {
-        if (blobs.storageUsedBy(ownerId) > STORAGE_LIMIT_BYTES) {
-            throw new ApiException(HttpStatus.CONFLICT, "Limite de armazenamento atingido. Exclua projetos antigos para criar novos.");
-        }
         var spec = generated.plan().spec();
         Project project = projects.save(new Project(ownerId, spec.name(), generated.plan().slug(), spec.description(),
                 spec.type(), mapper.writeValueAsString(spec)));
@@ -98,7 +97,7 @@ public class ProjectService {
 
     @Transactional(readOnly = true)
     public Usage usage(UUID ownerId) {
-        return new Usage(projects.countByOwnerIdAndStatusNot(ownerId, Project.Status.TRASHED), blobs.storageUsedBy(ownerId), STORAGE_LIMIT_BYTES);
+        return new Usage(projects.countByOwnerIdAndStatusNot(ownerId, Project.Status.TRASHED), blobs.storageUsedBy(ownerId), storageLimitBytes);
     }
 
     @Transactional(readOnly = true)
@@ -130,7 +129,10 @@ public class ProjectService {
     // ---------------- alterações (cada uma gera uma versão) ----------------
 
     @Transactional
-    public ChangeResult saveFile(UUID ownerId, UUID id, String rawPath, String content, int baseVersion) {
+    /**
+     * @param createOnly criação de arquivo novo: recusa se o caminho já existir, para nunca sobrescrever sem querer
+     */
+    public ChangeResult saveFile(UUID ownerId, UUID id, String rawPath, String content, int baseVersion, boolean createOnly) {
         Project project = editable(ownerId, id, baseVersion);
         String path = PathRules.normalize(rawPath);
         byte[] bytes = content.getBytes(StandardCharsets.UTF_8);
@@ -139,6 +141,9 @@ public class ProjectService {
         }
         Map<String, byte[]> files = currentFiles(project);
         boolean existed = files.containsKey(path);
+        if (existed && createOnly) {
+            throw new ApiException(HttpStatus.CONFLICT, "Já existe um arquivo em " + path + ". Abra-o para editar.");
+        }
         files.put(path, bytes);
         int number = writeVersion(project, baseVersion + 1, (existed ? "Editou " : "Criou ") + path, ProjectVersion.Origin.USER, ownerId, files);
         return new ChangeResult(number, SecretScanner.scan(path, content));
@@ -304,15 +309,27 @@ public class ProjectService {
         if (total > MAX_PROJECT_BYTES) {
             throw new ApiException(HttpStatus.CONTENT_TOO_LARGE, "O projeto passou do limite de 20 MB.");
         }
-        Instant now = clock.instant();
-        ProjectVersion version = versions.save(new ProjectVersion(project.getId(), number, label, origin, authorId, files.size(), total, now));
-        List<VersionFile> entries = new ArrayList<>();
+        // Cota do dono: conta o que já está guardado em todas as versões mais o conteúdo novo desta gravação.
+        Map<String, byte[]> newBlobs = new LinkedHashMap<>();
+        Map<String, String> shaByPath = new LinkedHashMap<>();
         for (Map.Entry<String, byte[]> e : files.entrySet()) {
             String sha = sha256(e.getValue());
-            if (!blobs.existsById(sha)) {
-                blobs.save(new FileBlob(sha, e.getValue()));
+            shaByPath.put(e.getKey(), sha);
+            if (!newBlobs.containsKey(sha) && !blobs.existsById(sha)) {
+                newBlobs.put(sha, e.getValue());
             }
-            entries.add(new VersionFile(version.getId(), e.getKey(), sha, e.getValue().length));
+        }
+        long incoming = newBlobs.values().stream().mapToLong(b -> b.length).sum();
+        if (incoming > 0 && blobs.storageUsedBy(project.getOwnerId()) + incoming > storageLimitBytes) {
+            throw new ApiException(HttpStatus.CONTENT_TOO_LARGE,
+                    "Limite de armazenamento da conta atingido. Exclua definitivamente projetos antigos para liberar espaço.");
+        }
+        Instant now = clock.instant();
+        ProjectVersion version = versions.save(new ProjectVersion(project.getId(), number, cut(label, 120), origin, authorId, files.size(), total, now));
+        newBlobs.forEach((sha, bytes) -> blobs.save(new FileBlob(sha, bytes)));
+        List<VersionFile> entries = new ArrayList<>();
+        for (Map.Entry<String, byte[]> e : files.entrySet()) {
+            entries.add(new VersionFile(version.getId(), e.getKey(), shaByPath.get(e.getKey()), e.getValue().length));
         }
         versionFiles.saveAll(entries);
         project.setCurrentVersion(number);
@@ -364,6 +381,11 @@ public class ProjectService {
         return new ProjectSummary(p.getId(), p.getName(), p.getSlug(), p.getDescription(), p.getType(), p.getStatus(),
                 p.getCurrentVersion(), v == null ? 0 : v.getFileCount(), v == null ? 0 : v.getSizeBytes(),
                 mapper.readTree(p.getSpecJson()), p.getCreatedAt(), p.getUpdatedAt(), p.getTrashedAt());
+    }
+
+    /** Rótulos automáticos citam caminhos, que podem ser longos; a coluna guarda até 120 caracteres. */
+    private static String cut(String label, int max) {
+        return label == null || label.length() <= max ? label : label.substring(0, max - 1) + "…";
     }
 
     private static String decodeText(byte[] bytes) {

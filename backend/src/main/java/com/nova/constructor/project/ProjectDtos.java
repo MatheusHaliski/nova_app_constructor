@@ -31,7 +31,8 @@ public final class ProjectDtos {
     public record SaveFile(
             @NotBlank(message = "Informe o caminho do arquivo.") @Size(max = 400) String path,
             @NotNull(message = "Informe o conteúdo.") String content,
-            @NotNull(message = "Informe a versão base.") Integer baseVersion) {}
+            @NotNull(message = "Informe a versão base.") Integer baseVersion,
+            Boolean createOnly) {}
 
     public record MoveFile(@NotBlank String from, @NotBlank @Size(max = 400) String to, @NotNull Integer baseVersion) {}
 

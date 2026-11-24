@@ -449,7 +449,7 @@ function Files({
           submit="Criar"
           onClose={() => setDialog(null)}
           onSubmit={async (path) => {
-            const ok = await afterChange(await request<ChangeResult>(`${base}/file`, "PUT", { path, content: "", baseVersion: version }), "Arquivo criado.");
+            const ok = await afterChange(await request<ChangeResult>(`${base}/file`, "PUT", { path, content: "", baseVersion: version, createOnly: true }), "Arquivo criado.");
             if (ok) {
               setDialog(null);
               setSelected(path.replace(/^\/+/, ""));
