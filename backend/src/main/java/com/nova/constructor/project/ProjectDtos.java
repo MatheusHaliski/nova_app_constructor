@@ -15,7 +15,8 @@ public final class ProjectDtos {
 
     public record ProjectSummary(UUID id, String name, String slug, String description, String type, Project.Status status,
                                  int currentVersion, int fileCount, long sizeBytes, JsonNode spec, Instant createdAt,
-                                 Instant updatedAt, Instant trashedAt) {}
+                                 Instant updatedAt, Instant trashedAt, Project.Visibility visibility,
+                                 UUID forkedFromId, String forkedFromLabel) {}
 
     public record FileEntry(String path, long size) {}
 

@@ -85,6 +85,38 @@ public class ProjectService {
         return summary(project);
     }
 
+    /** Cria um projeto a partir de arquivos prontos (usado no fork); nasce privado. */
+    @Transactional
+    public Project createFromFiles(UUID ownerId, String name, String slug, String description, String type, String specJson,
+                                   Map<String, byte[]> files, String label, ProjectVersion.Origin origin) {
+        Project project = projects.save(new Project(ownerId, name, slug, description, type, specJson));
+        writeVersion(project, 1, label, origin, ownerId, files);
+        return project;
+    }
+
+    /** Arquivos da versão atual que terceiros podem ver: sem os caminhos ocultos e sem arquivos de segredos. */
+    @Transactional(readOnly = true)
+    public Map<String, byte[]> visibleFiles(Project project, java.util.Collection<String> hiddenPaths) {
+        Map<String, byte[]> files = currentFiles(project);
+        files.keySet().removeIf(path -> PathRules.isSecretFile(path)
+                || hiddenPaths.stream().anyMatch(h -> path.equals(h) || path.startsWith(h + "/")));
+        return files;
+    }
+
+    public ProjectSummary summaryOf(Project project) {
+        return summary(project);
+    }
+
+    public Archive archive(Project project, Map<String, byte[]> files) {
+        String base = project.getSlug() + "-v" + project.getCurrentVersion();
+        byte[] bytes = zip(base, files);
+        return new Archive(base + ".zip", "application/zip", bytes, sha256(bytes));
+    }
+
+    public static String textOf(byte[] bytes) {
+        return decodeText(bytes);
+    }
+
     @Transactional(readOnly = true)
     public List<ProjectSummary> list(UUID ownerId, Project.Status status) {
         return projects.findByOwnerIdAndStatusOrderByUpdatedAtDesc(ownerId, status).stream().map(this::summary).toList();
@@ -380,7 +412,8 @@ public class ProjectService {
         ProjectVersion v = versions.findByProjectIdAndNumber(p.getId(), p.getCurrentVersion()).orElse(null);
         return new ProjectSummary(p.getId(), p.getName(), p.getSlug(), p.getDescription(), p.getType(), p.getStatus(),
                 p.getCurrentVersion(), v == null ? 0 : v.getFileCount(), v == null ? 0 : v.getSizeBytes(),
-                mapper.readTree(p.getSpecJson()), p.getCreatedAt(), p.getUpdatedAt(), p.getTrashedAt());
+                mapper.readTree(p.getSpecJson()), p.getCreatedAt(), p.getUpdatedAt(), p.getTrashedAt(), p.getVisibility(),
+                p.getForkedFromId(), p.getForkedFromLabel());
     }
 
     /** Rótulos automáticos citam caminhos, que podem ser longos; a coluna guarda até 120 caracteres. */
