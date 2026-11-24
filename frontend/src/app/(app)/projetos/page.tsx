@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { NovaIcon } from "@/components/icons/NovaIcon";
 import { formatBytes, formatDate } from "@/components/projects/format";
+import { VisibilityBadge } from "@/components/community/VisibilityBadge";
 import { StackBadges } from "@/components/projects/StackBadges";
 import { Alert, Card, PageHeader } from "@/components/ui/ui";
 import { loadCatalog } from "@/lib/catalog";
@@ -26,7 +27,7 @@ export default async function ProjectsPage({ searchParams }: PageProps<"/projeto
   ]);
   return (
     <div className="mx-auto max-w-6xl">
-      <PageHeader icon="folder" title="Projetos" intro="Seus projetos salvos. Todos nascem privados: só você vê.">
+      <PageHeader icon="folder" title="Projetos" intro="Seus projetos salvos. Todos nascem privados; você escolhe o que compartilhar em cada um.">
         <Link href="/novo-app" className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-text hover:brightness-110">
           <NovaIcon name="sparkle" size={16} />
           Novo app
@@ -74,7 +75,8 @@ export default async function ProjectsPage({ searchParams }: PageProps<"/projeto
                 </div>
                 <p className="line-clamp-2 min-h-8 text-xs text-muted">{p.description ?? "Sem descrição."}</p>
                 <StackBadges spec={p.spec} catalog={loaded.catalog} icons={loaded.icons} />
-                <p className="mt-auto flex flex-wrap gap-x-3 text-[11px] text-muted">
+                <p className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted">
+                  <VisibilityBadge visibility={p.visibility} />
                   <span>v{p.currentVersion}</span>
                   <span>{p.fileCount} arquivos</span>
                   <span>{formatBytes(p.sizeBytes)}</span>

@@ -107,7 +107,10 @@ export type ProjectSummary = {
   createdAt: string;
   updatedAt: string;
   trashedAt: string | null;
+  visibility: "PRIVATE" | "LINK" | "COMMUNITY" | "PUBLIC";
+  forkedFromId: string | null;
+  forkedFromLabel: string | null;
 };
 
 export type FileEntry = { path: string; size: number };
-export type VersionSummary = { number: number; label: string | null; origin: "GENERATOR" | "USER" | "RESTORE"; fileCount: number; sizeBytes: number; createdAt: string };
+export type VersionSummary = { number: number; label: string | null; origin: "GENERATOR" | "USER" | "RESTORE" | "FORK"; fileCount: number; sizeBytes: number; createdAt: string };
