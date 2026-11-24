@@ -67,4 +67,42 @@ class StorageQuotaIntegrationTest {
         // Reverter para um conteúdo já guardado não gasta espaço novo e continua permitido.
         mvc.perform(post("/api/v1/projects/" + project + "/versions/1/restore").header("Authorization", auth)).andExpect(status().isOk());
     }
+
+    private String register(String prefix) throws Exception {
+        String id = UUID.randomUUID().toString().substring(0, 8);
+        String json = mvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON).content("""
+                        {"name":"Cota","username":"%s_%s","email":"%s%s@nova.test","password":"Senha1234","birthDate":"1990-01-01","acceptTerms":true}
+                        """.formatted(prefix, id, prefix, id)))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        return "Bearer " + JsonPath.read(json, "$.accessToken");
+    }
+
+    /** Fork copia conteúdo que já existe no servidor; mesmo assim ele passa a ocupar a cota de quem copiou. */
+    @Test
+    void forksDeProjetosDeOutrasContasContamNaCotaDeQuemCopia() throws Exception {
+        String collector = register("colec");
+        int forked = 0;
+        int lastStatus = 0;
+        for (int i = 0; i < 5; i++) {
+            String owner = register("autor" + i);
+            String project = JsonPath.read(mvc.perform(post("/api/v1/generator/projects").header("Authorization", owner)
+                            .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"Cota\",\"type\":\"APP\",\"backend\":{\"id\":\"spring-boot\"}}"))
+                    .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString(), "$.id");
+            mvc.perform(put("/api/v1/projects/" + project + "/file").header("Authorization", owner).contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"path\":\"dados.txt\",\"content\":\"" + String.valueOf((char) ('a' + i)).repeat(100 * 1024) + "\",\"baseVersion\":1}"))
+                    .andExpect(status().isOk());
+            mvc.perform(put("/api/v1/projects/" + project + "/sharing").header("Authorization", owner).contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"visibility\":\"COMMUNITY\",\"license\":\"MIT\",\"currentPassword\":\"Senha1234\"}"))
+                    .andExpect(status().isOk());
+            lastStatus = mvc.perform(post("/api/v1/community/projects/" + project + "/fork").header("Authorization", collector)).andReturn().getResponse().getStatus();
+            if (lastStatus != 201) {
+                break;
+            }
+            forked++;
+        }
+        org.assertj.core.api.Assertions.assertThat(lastStatus).isEqualTo(413);
+        org.assertj.core.api.Assertions.assertThat(forked).isBetween(1, 2);
+        mvc.perform(get("/api/v1/projects/usage").header("Authorization", collector))
+                .andExpect(jsonPath("$.storageBytes", org.hamcrest.Matchers.lessThanOrEqualTo(300 * 1024)));
+    }
 }

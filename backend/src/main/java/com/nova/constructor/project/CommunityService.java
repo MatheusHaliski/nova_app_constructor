@@ -199,8 +199,10 @@ public class CommunityService {
     @Transactional
     public void deleteComment(UUID userId, UUID id, long commentId, boolean admin) {
         Project project = load(userId, id);
-        String author = jdbc.sql("select author_id from project_comments where id = ? and project_id = ?").params(commentId, id.toString())
-                .query(String.class).optional().orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Comentário não encontrado."));
+        // O autor pode ser nulo (conta excluída): a existência do comentário é conferida à parte.
+        Map<String, Object> row = jdbc.sql("select author_id from project_comments where id = ? and project_id = ?").params(commentId, id.toString())
+                .query().listOfRows().stream().findFirst().orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Comentário não encontrado."));
+        String author = (String) row.get("author_id");
         if (!admin && !project.getOwnerId().equals(userId) && !userId.toString().equals(author)) {
             throw new ApiException(HttpStatus.FORBIDDEN, "Você não pode remover este comentário.");
         }

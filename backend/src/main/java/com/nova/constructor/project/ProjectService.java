@@ -341,17 +341,23 @@ public class ProjectService {
         if (total > MAX_PROJECT_BYTES) {
             throw new ApiException(HttpStatus.CONTENT_TOO_LARGE, "O projeto passou do limite de 20 MB.");
         }
-        // Cota do dono: conta o que já está guardado em todas as versões mais o conteúdo novo desta gravação.
+        // Cota do dono: o que ele já referencia em todas as versões mais o que passa a referenciar nesta gravação.
+        // Conteúdo que já existe no servidor por causa de outra conta (fork, arquivo igual) também conta para ele.
+        java.util.Set<String> owned = blobs.blobsReferencedBy(project.getOwnerId());
+        Map<String, Integer> newToOwner = new LinkedHashMap<>();
         Map<String, byte[]> newBlobs = new LinkedHashMap<>();
         Map<String, String> shaByPath = new LinkedHashMap<>();
         for (Map.Entry<String, byte[]> e : files.entrySet()) {
             String sha = sha256(e.getValue());
             shaByPath.put(e.getKey(), sha);
+            if (!owned.contains(sha)) {
+                newToOwner.put(sha, e.getValue().length);
+            }
             if (!newBlobs.containsKey(sha) && !blobs.existsById(sha)) {
                 newBlobs.put(sha, e.getValue());
             }
         }
-        long incoming = newBlobs.values().stream().mapToLong(b -> b.length).sum();
+        long incoming = newToOwner.values().stream().mapToLong(Integer::longValue).sum();
         if (incoming > 0 && blobs.storageUsedBy(project.getOwnerId()) + incoming > storageLimitBytes) {
             throw new ApiException(HttpStatus.CONTENT_TOO_LARGE,
                     "Limite de armazenamento da conta atingido. Exclua definitivamente projetos antigos para liberar espaço.");

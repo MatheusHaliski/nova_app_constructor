@@ -254,6 +254,26 @@ class CommunityIntegrationTest {
                 .andExpect(jsonPath("$.items[*].message", hasItem(containsString("Código malicioso"))));
     }
 
+    @Test
+    void donoRemoveComentarioDeQuemExcluiuAConta() throws Exception {
+        Account owner = account();
+        Account gone = account();
+        String id = project(owner, "Agenda Comentada");
+        publish(owner, id);
+        mvc.perform(post("/api/v1/community/projects/" + id + "/comments").header("Authorization", gone.auth())
+                .contentType(MediaType.APPLICATION_JSON).content("{\"body\":\"Vou sair da rede\"}")).andExpect(status().isCreated());
+        mvc.perform(delete("/api/v1/me").header("Authorization", gone.auth()).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"currentPassword\":\"Senha1234\",\"confirmation\":\"EXCLUIR\"}")).andExpect(status().is2xxSuccessful());
+
+        String list = mvc.perform(get("/api/v1/community/projects/" + id + "/comments").header("Authorization", owner.auth()))
+                .andExpect(jsonPath("$", hasSize(1))).andExpect(jsonPath("$[0].author").doesNotExist()).andExpect(jsonPath("$[0].canDelete").value(true))
+                .andReturn().getResponse().getContentAsString();
+        int commentId = JsonPath.read(list, "$[0].id");
+        mvc.perform(delete("/api/v1/community/projects/" + id + "/comments/" + commentId).header("Authorization", owner.auth())).andExpect(status().isNoContent());
+        mvc.perform(get("/api/v1/community/projects/" + id + "/comments").header("Authorization", owner.auth())).andExpect(jsonPath("$", hasSize(0)));
+        mvc.perform(delete("/api/v1/community/projects/" + id + "/comments/999999").header("Authorization", owner.auth())).andExpect(status().isNotFound());
+    }
+
     private static List<String> entries(byte[] zip) throws Exception {
         List<String> names = new ArrayList<>();
         try (ZipInputStream in = new ZipInputStream(new ByteArrayInputStream(zip))) {
