@@ -9,6 +9,8 @@ import { Alert, Button, Card, Field, Input, Modal } from "@/components/ui/ui";
 import type { Catalog, FileEntry, ProjectSummary, VersionSummary } from "@/lib/catalog-types";
 import type { IconData } from "@/lib/techs";
 import { formatBytes, formatDate } from "./format";
+import { SharePanel } from "@/components/community/SharePanel";
+import { VisibilityBadge } from "@/components/community/VisibilityBadge";
 import { StackBadges } from "./StackBadges";
 
 /*
@@ -16,7 +18,7 @@ import { StackBadges } from "./StackBadges";
  * (cada alteração cria uma versão; restaurar nunca apaga histórico) e download do projeto, de uma pasta ou versão.
  */
 
-type Tab = "overview" | "files" | "versions" | "settings";
+type Tab = "overview" | "files" | "versions" | "share" | "settings";
 type Problem = { detail?: string };
 type Warning = { path: string; line: number; kind: string };
 type ChangeResult = { version: number; secretWarnings: Warning[] };
@@ -25,10 +27,11 @@ const TABS: { id: Tab; label: string; icon: NovaIconName }[] = [
   { id: "overview", label: "Visão geral", icon: "layers" },
   { id: "files", label: "Arquivos", icon: "tree" },
   { id: "versions", label: "Versões", icon: "history" },
+  { id: "share", label: "Compartilhar", icon: "share" },
   { id: "settings", label: "Configurações", icon: "sliders" },
 ];
 
-const ORIGIN: Record<VersionSummary["origin"], string> = { GENERATOR: "Gerador", USER: "Edição", RESTORE: "Restauração" };
+const ORIGIN: Record<VersionSummary["origin"], string> = { GENERATOR: "Gerador", USER: "Edição", RESTORE: "Restauração", FORK: "Fork" };
 
 async function request<T>(path: string, method = "GET", body?: unknown): Promise<{ ok: true; data: T } | { ok: false; problem: Problem }> {
   const res = await fetch(`/api/backend/${path}`, {
@@ -50,7 +53,9 @@ export function ProjectWorkspace({
   readme,
   catalog,
   icons,
+  initialTab = "overview",
 }: {
+  initialTab?: "overview" | "share";
   project: ProjectSummary;
   initialTree: FileEntry[];
   initialVersions: VersionSummary[];
@@ -61,7 +66,7 @@ export function ProjectWorkspace({
   const [project, setProject] = useState(initialProject);
   const [tree, setTree] = useState(initialTree);
   const [versions, setVersions] = useState(initialVersions);
-  const [tab, setTab] = useState<Tab>("overview");
+  const [tab, setTab] = useState<Tab>(initialTab);
   const [message, setMessage] = useState<{ tone: "success" | "danger" | "warning"; text: string } | null>(null);
   const base = `projects/${project.id}`;
   const readOnly = project.status !== "ACTIVE";
@@ -104,12 +109,11 @@ export function ProjectWorkspace({
           <h1 className="mt-1 flex flex-wrap items-center gap-3 text-2xl font-bold tracking-tight">
             {project.name}
             <span className="rounded-full bg-surface-2 px-2 py-0.5 text-xs font-semibold text-muted">v{project.currentVersion}</span>
-            <span className="inline-flex items-center gap-1 rounded-full bg-surface-2 px-2 py-0.5 text-xs font-semibold text-muted">
-              <NovaIcon name="lock" size={12} /> Privado
-            </span>
+            <VisibilityBadge visibility={project.visibility} />
             {readOnly && <span className="rounded-full bg-warning/15 px-2 py-0.5 text-xs font-semibold text-warning">{project.status === "ARCHIVED" ? "Arquivado" : "Na lixeira"}</span>}
           </h1>
           {project.description && <p className="mt-1 text-sm text-muted">{project.description}</p>}
+          {project.forkedFromLabel && <p className="mt-1 text-xs text-muted">Fork de {project.forkedFromLabel}</p>}
           <div className="mt-2">
             <StackBadges spec={project.spec} catalog={catalog} icons={icons} />
           </div>
@@ -148,6 +152,7 @@ export function ProjectWorkspace({
       {tab === "overview" && <Overview project={project} readme={readme} catalog={catalog} icons={icons} />}
       {tab === "files" && <Files base={base} tree={tree} version={project.currentVersion} readOnly={readOnly} afterChange={afterChange} />}
       {tab === "versions" && <Versions base={base} versions={versions} current={project.currentVersion} readOnly={readOnly} afterChange={afterChange} onLabeled={refresh} />}
+      {tab === "share" && <SharePanel projectId={project.id} projectName={project.name} disabled={readOnly} onVisibility={(visibility) => setProject((p) => ({ ...p, visibility }))} />}
       {tab === "settings" && <Settings project={project} onChanged={setProject} onMessage={setMessage} />}
     </div>
   );
@@ -449,7 +454,7 @@ function Files({
           submit="Criar"
           onClose={() => setDialog(null)}
           onSubmit={async (path) => {
-            const ok = await afterChange(await request<ChangeResult>(`${base}/file`, "PUT", { path, content: "", baseVersion: version }), "Arquivo criado.");
+            const ok = await afterChange(await request<ChangeResult>(`${base}/file`, "PUT", { path, content: "", baseVersion: version, createOnly: true }), "Arquivo criado.");
             if (ok) {
               setDialog(null);
               setSelected(path.replace(/^\/+/, ""));

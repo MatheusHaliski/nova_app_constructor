@@ -19,6 +19,15 @@ final class Repositories {
         List<Project> findByOwnerIdAndStatusOrderByUpdatedAtDesc(UUID ownerId, Project.Status status);
 
         long countByOwnerIdAndStatusNot(UUID ownerId, Project.Status status);
+
+        /** Projetos listados na rede (Comunidade e Público), com busca por texto e por tecnologia do formulário. */
+        @Query("select p from Project p where p.status = com.nova.constructor.project.Project.Status.ACTIVE "
+                + "and p.visibility in (com.nova.constructor.project.Project.Visibility.COMMUNITY, com.nova.constructor.project.Project.Visibility.PUBLIC) "
+                + "and (:q is null or lower(p.name) like :q or lower(p.description) like :q) "
+                + "and (:tech is null or p.specJson like :tech) order by p.publishedAt desc")
+        List<Project> findListed(@Param("q") String q, @Param("tech") String tech, org.springframework.data.domain.Pageable page);
+
+        long countByForkedFromId(UUID forkedFromId);
     }
 
     interface VersionRepository extends JpaRepository<ProjectVersion, Long> {
@@ -42,7 +51,9 @@ final class Repositories {
         @Query("delete from FileBlob b where not exists (select 1 from VersionFile f where f.blobSha = b.sha256)")
         int deleteOrphans();
 
-        @Query("select coalesce(sum(v.sizeBytes), 0) from ProjectVersion v, Project p where v.projectId = p.id and v.number = p.currentVersion and p.ownerId = :ownerId")
+        /** Bytes realmente guardados para um dono: cada conteúdo distinto conta uma vez, em todas as versões. */
+        @Query("select coalesce(sum(b.sizeBytes), 0) from FileBlob b where exists (select 1 from VersionFile f, ProjectVersion v, Project p "
+                + "where f.blobSha = b.sha256 and f.versionId = v.id and v.projectId = p.id and p.ownerId = :ownerId)")
         long storageUsedBy(@Param("ownerId") UUID ownerId);
     }
 }

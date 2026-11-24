@@ -7,8 +7,9 @@ import { api } from "@/lib/session";
 
 export const metadata: Metadata = { title: "Projeto" };
 
-export default async function ProjectPage({ params }: PageProps<"/projetos/[id]">) {
+export default async function ProjectPage({ params, searchParams }: PageProps<"/projetos/[id]">) {
   const { id } = await params;
+  const share = (await searchParams).aba === "compartilhar";
   if (!/^[0-9a-f-]{36}$/.test(id)) notFound();
   const [project, tree, versions, readme, loaded] = await Promise.all([
     api<ProjectSummary>(`projects/${id}`),
@@ -26,6 +27,7 @@ export default async function ProjectPage({ params }: PageProps<"/projetos/[id]"
       readme={readme.ok ? readme.data.content : null}
       catalog={loaded.catalog}
       icons={loaded.icons}
+      initialTab={share ? "share" : "overview"}
     />
   );
 }

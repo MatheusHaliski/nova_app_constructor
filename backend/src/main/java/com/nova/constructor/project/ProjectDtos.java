@@ -15,7 +15,8 @@ public final class ProjectDtos {
 
     public record ProjectSummary(UUID id, String name, String slug, String description, String type, Project.Status status,
                                  int currentVersion, int fileCount, long sizeBytes, JsonNode spec, Instant createdAt,
-                                 Instant updatedAt, Instant trashedAt) {}
+                                 Instant updatedAt, Instant trashedAt, Project.Visibility visibility,
+                                 UUID forkedFromId, String forkedFromLabel) {}
 
     public record FileEntry(String path, long size) {}
 
@@ -31,7 +32,8 @@ public final class ProjectDtos {
     public record SaveFile(
             @NotBlank(message = "Informe o caminho do arquivo.") @Size(max = 400) String path,
             @NotNull(message = "Informe o conteúdo.") String content,
-            @NotNull(message = "Informe a versão base.") Integer baseVersion) {}
+            @NotNull(message = "Informe a versão base.") Integer baseVersion,
+            Boolean createOnly) {}
 
     public record MoveFile(@NotBlank String from, @NotBlank @Size(max = 400) String to, @NotNull Integer baseVersion) {}
 

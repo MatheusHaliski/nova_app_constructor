@@ -17,7 +17,9 @@ public final class SecretScanner {
             new Rule("Token do GitHub", Pattern.compile("\\bgh[pousr]_[A-Za-z0-9]{36,}\\b")),
             new Rule("Chave de API", Pattern.compile("\\bsk-[A-Za-z0-9_-]{20,}\\b")),
             new Rule("Senha ou segredo em texto", Pattern.compile(
-                    "(?i)(password|passwd|senha|secret|token|api[_-]?key)\\w*\\s*[:=]\\s*[\"']?(?!\\$\\{)(?!process\\.env)(?!os\\.environ)[^\\s\"'${}<>]{8,}")));
+                    "(?i)(password|passwd|senha|secret|token|api[_-]?key)\\w*\\s*[:=]\\s*(?!\\$\\{)(?!process\\.env)(?!os\\.environ)"
+                            // valor literal: entre aspas, ou solto até o fim do "campo" (atribuições de código como "= outraVariavel;" não contam)
+                            + "(?:[\"'][^\\s\"'${}<>]{8,}[\"']|[^\\s\"'${}<>();,]{8,}(?=\\s|$))")));
 
     private SecretScanner() {}
 

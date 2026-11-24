@@ -2,12 +2,13 @@ package com.nova.constructor.config;
 
 import java.time.Duration;
 import java.util.List;
+import org.springframework.util.unit.DataSize;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 
 /** Configurações próprias do NOVA (prefixo {@code nova}). */
 @ConfigurationProperties("nova")
-public record NovaProperties(Jwt jwt, Login login, Cors cors, Admin admin, Connectors connectors, @DefaultValue Ai ai,
+public record NovaProperties(Jwt jwt, Login login, Cors cors, Admin admin, Connectors connectors, @DefaultValue Ai ai, @DefaultValue Projects projects,
                              @DefaultValue("2026-11") String termsVersion) {
 
     /**
@@ -53,4 +54,7 @@ public record NovaProperties(Jwt jwt, Login login, Cors cors, Admin admin, Conne
      * @param anthropicApiKey chave da API da Anthropic (segredo: ANTHROPIC_API_KEY)
      */
     public record Ai(String anthropicApiKey, @DefaultValue("claude-opus-5-5") String model) {}
+
+    /** @param storageLimit espaço total por conta, somando todas as versões de todos os projetos */
+    public record Projects(@DefaultValue("200MB") DataSize storageLimit) {}
 }

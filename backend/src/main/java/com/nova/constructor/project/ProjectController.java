@@ -77,7 +77,7 @@ public class ProjectController {
 
     @PutMapping("/{id}/file")
     public ChangeResult save(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, @Valid @RequestBody SaveFile body) {
-        return service.saveFile(id(jwt), id, body.path(), body.content(), body.baseVersion());
+        return service.saveFile(id(jwt), id, body.path(), body.content(), body.baseVersion(), Boolean.TRUE.equals(body.createOnly()));
     }
 
     @PostMapping("/{id}/files/move")

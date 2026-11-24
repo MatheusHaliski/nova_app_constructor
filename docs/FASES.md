@@ -9,7 +9,7 @@ página "Em construção" com o RF e a fase prevista.
 | 1 | Fundação: autenticação, cadastro, controle de acesso, configurações do perfil (LGPD), marca e catálogo de tecnologias | Cartões [Infra], [Backend], [Frontend]; RF-3.05 (LGPD); RF-4.04/4.25 (acervo e fichas) | **Concluída** |
 | 2 | Meus projetos: salvar, página do projeto, árvore de arquivos, editor, versões, download | RF-2.01 a RF-2.06, RF-2.08, RF-2.10 | **Entregue (base)** |
 | 3 | Criar app: formulário (Copilot total ou assistido), stack com ícones, telas, autenticação opcional, IA e acervo RAG | Cartões [Obj 1] | **Entregue (estrutura)** |
-| 4 | Rede NOVA: visibilidade, compartilhamento, feed, explorar, fork, comentários, notificações, moderação | RF-3.01 a RF-3.04 | Planejada |
+| 4 | Rede NOVA: visibilidade, compartilhamento, feed, explorar, fork, comentários, notificações, moderação | RF-3.01 a RF-3.04 | **Entregue (base)** |
 | 5 | Abstração visual do backend e do frontend | RF-4.01 a RF-4.35 (MVP) | Planejada |
 | 6 | Integrações (git, IDE, CLI/API), execução em sandbox, deploy e conectores opcionais | RF-2.07, RF-2.09 | Planejada |
 
@@ -59,3 +59,30 @@ página "Em construção" com o RF e a fase prevista.
 - `/projetos` e `/projetos/[id]`: lista com selos de stack, ficha técnica, árvore de arquivos com editor, versões e configurações.
 
 **Ainda não feito nestas fases:** editor com realce de sintaxe, comparação (diff) entre versões, upload de arquivos, salvamento automático, backlog e diagramas gerados, editor visual de telas (ScreenSpec), acervo RAG, textos do formulário e dos projetos em inglês e espanhol.
+
+## Fase 4 — o que foi entregue
+
+**Compartilhamento (aba "Compartilhar" do projeto)**
+- Quatro níveis: Privado (padrão), Link, Comunidade e Público.
+- Ampliar a visibilidade passa por verificações: senha atual, licença escolhida para entrar na rede
+  (MIT, Apache 2.0, GPL 3.0 ou todos os direitos reservados), nome do projeto digitado para tornar público e
+  varredura de senhas e chaves nos arquivos que ficarão visíveis. Reduzir é imediato.
+- Arquivos e pastas ocultos: só o dono vê; não entram em downloads nem em forks. Arquivos `.env` nunca são compartilhados.
+- Links de compartilhamento sem login (`/s/<token>`), com validade e revogação. O endereço aparece uma única vez;
+  o servidor guarda só o hash. Tornar o projeto privado revoga todos os links.
+
+**Rede**
+- Feed, Explorar (busca por texto e filtro por tecnologia, com os ícones do catálogo), Estrelas e Compartilhados.
+- Página do projeto na rede, somente leitura: arquivos visíveis, download, estrela, fork, comentários e denúncia.
+- Fork cria um projeto privado para quem copiou, com a origem registrada ("Fork de @autor/projeto").
+  Projetos com todos os direitos reservados não permitem fork.
+- Notificações no sino e em `/notificacoes` para estrela, fork, comentário e decisões da moderação.
+- Moderação (administradores): fila de denúncias com descartar, ocultar comentário ou despublicar o projeto;
+  a pessoa afetada é avisada com o motivo.
+
+**API**: `PUT /api/v1/projects/{id}/sharing`, `/sharing/links`, `/api/v1/community/**`, `/api/v1/shared/{token}/**`
+(sem login), `/api/v1/me/notifications`, `/api/v1/admin/reports`.
+
+**Ainda não entregue nesta fase**: perfil público e portfólio, seguir pessoas, convites com papéis por pessoa,
+bloqueio entre usuários, recurso contra decisões de moderação, paginação infinita do feed e inclusão dos dados da rede
+na exportação da conta (LGPD).

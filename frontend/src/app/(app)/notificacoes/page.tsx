@@ -1,16 +1,15 @@
-import { NovaIcon } from "@/components/icons/NovaIcon";
-import { Card, PageHeader } from "@/components/ui/ui";
+import { NotificationsList } from "@/components/community/NotificationsList";
+import { Alert, PageHeader } from "@/components/ui/ui";
+import type { NotificationList } from "@/lib/community-types";
 import { getPrefs } from "@/lib/server-prefs";
+import { api } from "@/lib/session";
 
 export default async function NotificationsPage() {
-  const { t } = await getPrefs();
+  const [{ t }, result] = await Promise.all([getPrefs(), api<NotificationList>("me/notifications")]);
   return (
     <div className="mx-auto max-w-3xl">
       <PageHeader icon="bell" title={t.shell.notifications} />
-      <Card className="flex flex-col items-center gap-3 py-12 text-center text-muted">
-        <NovaIcon name="bell" size={40} gradient />
-        <p>{t.shell.noNotifications}</p>
-      </Card>
+      {result.ok ? <NotificationsList initial={result.data.items} empty={t.shell.noNotifications} /> : <Alert tone="danger">{t.common.error}</Alert>}
     </div>
   );
 }

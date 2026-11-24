@@ -7,6 +7,7 @@ import { NovaLogo, NovaMark } from "@/components/brand/NovaLogo";
 import { NovaIcon } from "@/components/icons/NovaIcon";
 import type { Dict } from "@/lib/i18n";
 import type { NavGroup } from "@/lib/nav";
+import type { AppNotification, NotificationList } from "@/lib/community-types";
 import type { Lang } from "@/lib/prefs";
 
 type ShellUser = { name: string; username: string; email: string; isAdmin: boolean };
@@ -37,8 +38,10 @@ export function AppShell({
   nav,
   lang,
   t,
+  unread,
   children,
 }: {
+  unread: number;
   user: ShellUser;
   nav: NavGroup[];
   lang: Lang;
@@ -60,7 +63,7 @@ export function AppShell({
 
   return (
     <div className="flex min-h-screen flex-col">
-      <TopBar user={user} t={t} onOpenMenu={() => setMobileOpen(true)} />
+      <TopBar user={user} t={t} unread={unread} onOpenMenu={() => setMobileOpen(true)} />
       <div className="flex flex-1">
         {mobileOpen && (
           <button
@@ -85,7 +88,8 @@ export function AppShell({
   );
 }
 
-function TopBar({ user, t, onOpenMenu }: { user: ShellUser; t: Dict; onOpenMenu: () => void }) {
+function TopBar({ user, t, unread, onOpenMenu }: { user: ShellUser; t: Dict; unread: number; onOpenMenu: () => void }) {
+  const [recent, setRecent] = useState<AppNotification[] | null>(null);
   const [open, setOpen] = useState<"none" | "notifications" | "profile">("none");
   const ref = useRef<HTMLDivElement>(null);
   const router = useRouter();
@@ -137,11 +141,25 @@ function TopBar({ user, t, onOpenMenu }: { user: ShellUser; t: Dict; onOpenMenu:
         <div ref={ref} className="relative flex items-center gap-1">
           <button
             className="relative rounded-lg p-2 text-text hover:bg-surface-2"
-            aria-label={t.shell.notifications}
+            aria-label={unread ? `${t.shell.notifications} (${unread})` : t.shell.notifications}
             aria-expanded={open === "notifications"}
-            onClick={() => setOpen(open === "notifications" ? "none" : "notifications")}
+            onClick={() => {
+              const opening = open !== "notifications";
+              setOpen(opening ? "notifications" : "none");
+              if (opening) {
+                void fetch("/api/backend/me/notifications")
+                  .then((r) => (r.ok ? (r.json() as Promise<NotificationList>) : null))
+                  .then((list) => setRecent(list ? list.items.slice(0, 5) : []))
+                  .catch(() => setRecent([]));
+              }
+            }}
           >
             <NovaIcon name="bell" />
+            {unread > 0 && (
+              <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1 text-[10px] font-bold text-white">
+                {unread > 9 ? "9+" : unread}
+              </span>
+            )}
           </button>
           <button
             className="flex items-center gap-2 rounded-full border border-border py-1 pl-1 pr-2 hover:bg-surface-2"
@@ -158,10 +176,22 @@ function TopBar({ user, t, onOpenMenu }: { user: ShellUser; t: Dict; onOpenMenu:
           {open === "notifications" && (
             <div className="absolute right-12 top-12 w-72 rounded-xl border border-border bg-surface p-4 shadow-xl">
               <p className="mb-2 text-sm font-semibold">{t.shell.notifications}</p>
-              <div className="flex flex-col items-center gap-2 py-4 text-center text-sm text-muted">
-                <NovaIcon name="bell" size={28} gradient />
-                {t.shell.noNotifications}
-              </div>
+              {recent && recent.length > 0 ? (
+                <ul className="mb-2 flex flex-col gap-1">
+                  {recent.map((n) => (
+                    <li key={n.id}>
+                      <Link href={n.link ?? "/notificacoes"} onClick={() => setOpen("none")} className={`block rounded-lg px-2 py-1.5 text-xs hover:bg-surface-2 ${n.read ? "text-muted" : "font-semibold"}`}>
+                        {n.message}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="flex flex-col items-center gap-2 py-4 text-center text-sm text-muted">
+                  <NovaIcon name="bell" size={28} gradient />
+                  {recent ? t.shell.noNotifications : "…"}
+                </div>
+              )}
               <Link href="/notificacoes" className="block text-center text-xs font-semibold text-primary">
                 {t.shell.notifications} →
               </Link>
