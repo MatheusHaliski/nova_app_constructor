@@ -55,5 +55,10 @@ final class Repositories {
         @Query("select coalesce(sum(b.sizeBytes), 0) from FileBlob b where exists (select 1 from VersionFile f, ProjectVersion v, Project p "
                 + "where f.blobSha = b.sha256 and f.versionId = v.id and v.projectId = p.id and p.ownerId = :ownerId)")
         long storageUsedBy(@Param("ownerId") UUID ownerId);
+
+        /** Conteúdos que o dono já referencia em algum projeto ou versão (gravar de novo não gasta cota). */
+        @Query("select distinct f.blobSha from VersionFile f, ProjectVersion v, Project p "
+                + "where f.versionId = v.id and v.projectId = p.id and p.ownerId = :ownerId")
+        java.util.Set<String> blobsReferencedBy(@Param("ownerId") UUID ownerId);
     }
 }
