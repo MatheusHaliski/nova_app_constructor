@@ -20,6 +20,10 @@
     <properties>
         <java.version>21</java.version>
         <springdoc.version>3.2.0</springdoc.version>
+        <!-- mvn spring-boot:run (só desenvolvimento): perfil "dev" com H2 em modo MySQL, a menos que SPRING_DATASOURCE_URL
+             aponte para um banco real. O jar empacotado e o Docker não usam isto. -->
+        <spring-boot.run.useTestClasspath>true</spring-boot.run.useTestClasspath>
+        <spring-boot.run.profiles>dev</spring-boot.run.profiles>
     </properties>
 
     <dependencies>
@@ -103,6 +107,9 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <useTestClasspath>${spring-boot.run.useTestClasspath}</useTestClasspath>
+                </configuration>
             </plugin>
         </plugins>
     </build>

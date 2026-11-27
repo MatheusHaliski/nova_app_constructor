@@ -33,17 +33,15 @@ Para subir também os conectores opcionais: `docker compose --profile conectores
 
 ## Rodar sem Docker
 
-Backend (precisa de um MySQL; veja as variáveis em `.env.example`):
+Backend para desenvolvimento, sem MySQL: `mvn spring-boot:run` usa o perfil `dev`, com H2 em memória em modo MySQL
+(os dados somem ao desligar):
 
 ```bash
-cd backend && ./mvnw spring-boot:run
+cd backend && NOVA_ADMIN_EMAIL=admin@nova.local NOVA_ADMIN_PASSWORD=Admin12345 ./mvnw spring-boot:run
 ```
 
-Para experimentar sem MySQL, com H2 em modo MySQL (só desenvolvimento):
-
-```bash
-cd backend && NOVA_ADMIN_EMAIL=admin@nova.test NOVA_ADMIN_PASSWORD=Admin12345 ./mvnw spring-boot:test-run -Dspring-boot.run.profiles=test -Dspring-boot.run.mainClass=com.nova.constructor.TestNovaApplication
-```
+Com MySQL, defina `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME` e `SPRING_DATASOURCE_PASSWORD` (veja `.env.example`).
+No início, o log diz qual IA ficou ativa: `IA do NOVA - Copilot: ClaudeCopilot (modelo: ...)` ou `NoCopilotAi` sem chave.
 
 Frontend:
 

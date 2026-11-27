@@ -1,0 +1,8 @@
+# Só para "mvn spring-boot:run" (o pom ativa este perfil e põe o H2 no classpath); o jar empacotado não traz o H2.
+# Perfil de desenvolvimento do "mvn spring-boot:run": H2 em memória (modo MySQL) quando SPRING_DATASOURCE_URL não existe.
+# Os dados somem ao desligar. Para usar MySQL, defina SPRING_DATASOURCE_URL/USERNAME/PASSWORD.
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:h2:mem:nova;MODE=MySQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1}
+    username: ${SPRING_DATASOURCE_USERNAME:sa}
+    password: ${SPRING_DATASOURCE_PASSWORD:}

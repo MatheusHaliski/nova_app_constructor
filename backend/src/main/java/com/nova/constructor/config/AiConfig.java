@@ -9,6 +9,8 @@ import com.nova.constructor.insight.ImprovementAi;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import tools.jackson.databind.json.JsonMapper;
@@ -20,16 +22,22 @@ import tools.jackson.databind.json.JsonMapper;
 @Configuration
 public class AiConfig {
 
+    private static final Logger log = LoggerFactory.getLogger(AiConfig.class);
+
     @Bean
     CopilotAi copilotAi(NovaProperties props) {
         String key = props.ai().anthropicApiKey();
-        return key == null || key.isBlank() ? new NoCopilotAi() : new ClaudeCopilot(key, props.ai().model());
+        CopilotAi ai = key == null || key.isBlank() ? new NoCopilotAi() : new ClaudeCopilot(key, props.ai().model());
+        log.info("IA do NOVA - Copilot: {} (modelo: {})", ai.getClass().getSimpleName(), ai.available() ? ai.model() : "nenhum, sem chave");
+        return ai;
     }
 
     @Bean
     ImprovementAi improvementAi(NovaProperties props, JsonMapper mapper) {
         String key = props.ai().anthropicApiKey();
-        return key == null || key.isBlank() ? new NoImprovementAi() : new ClaudeImprovementAi(key, props.ai().model(), mapper);
+        ImprovementAi ai = key == null || key.isBlank() ? new NoImprovementAi() : new ClaudeImprovementAi(key, props.ai().model(), mapper);
+        log.info("IA do NOVA - melhorias e perguntas: {} (modelo: {})", ai.getClass().getSimpleName(), ai.available() ? ai.model() : "nenhum, sem chave");
+        return ai;
     }
 
     static final class NoCopilotAi implements CopilotAi {

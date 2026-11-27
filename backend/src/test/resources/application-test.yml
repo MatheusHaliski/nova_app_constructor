@@ -7,3 +7,7 @@ nova:
   admin:
     email: admin@nova.test
     password: Admin12345
+  # Os testes nunca chamam a IA real (nem gastam créditos), mesmo com a chave no ambiente: o caminho com IA é coberto
+  # por uma IA falsa em AiFeaturesIntegrationTest.
+  ai:
+    anthropic-api-key: ""
