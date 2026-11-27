@@ -42,7 +42,19 @@ final class FrontendReader {
                         : file.startsWith("error") ? "tela de erro da rota" : file.startsWith("loading") ? "carregamento da rota" : "página não encontrada"));
             } else if (p.contains("/components/")) {
                 facts.items.add(new Facts.Item(Role.COMPONENT, file.replaceAll("\\.(tsx|jsx|ts|js)$", ""), p, "componente"));
-            } else if (vite && (p.contains("/pages/") || file.matches("App\\.(tsx|jsx)"))) {
+            } else if (vite && file.matches("routes\\.(tsx|ts)")) {
+                // Rotas do roteador gerado pelo NOVA: { path: "/produtos/:id", component: ProdutoPage }
+                Matcher r = Pattern.compile("path:\\s*[\"']([^\"']+)[\"']\\s*,\\s*component:\\s*(\\w+)").matcher(text);
+                while (r.find()) {
+                    String component = r.group(2);
+                    String target = src.paths("frontend/src/.*\\b" + component + "\\.(tsx|jsx)").stream().findFirst().orElse(p);
+                    facts.screens.add(screen(r.group(1), target, src.get(target), src));
+                }
+            } else if (vite && p.contains("/pages/") && src.has("frontend/src/routes.tsx")) {
+                continue;
+            } else if (vite && file.matches("App\\.(tsx|jsx)") && src.has("frontend/src/routes.tsx")) {
+                facts.screens.add(screen("/", p, text, src));
+            } else if (vite && (p.contains("/pages/") && !src.has("frontend/src/routes.tsx") || file.matches("App\\.(tsx|jsx)"))) {
                 Matcher r = ROUTE.matcher(text);
                 boolean routed = false;
                 while (r.find()) {

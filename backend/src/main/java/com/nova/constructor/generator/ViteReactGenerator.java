@@ -70,22 +70,7 @@ public class ViteReactGenerator implements StackGenerator {
                   </StrictMode>,
                 );
                 """);
-        StringBuilder screens = new StringBuilder();
-        for (String screen : spec.screensOrEmpty()) {
-            screens.append("        <li>").append(NextJsGenerator.jsx(screen)).append("</li>\n");
-        }
-        files.put(root + "src/App.tsx", Tpl.fill("""
-                export function App() {
-                  return (
-                    <main style={{ padding: 32, fontFamily: "system-ui, sans-serif" }}>
-                      <h1>{{title}}</h1>
-                      <p>{{description}}</p>
-                {{screens}}    </main>
-                  );
-                }
-                """, Map.of("title", NextJsGenerator.jsx(spec.name()),
-                "description", NextJsGenerator.jsx(spec.description() == null ? "Projeto gerado pelo NOVA." : spec.description()),
-                "screens", screens.isEmpty() ? "" : "      <h2>Telas previstas</h2>\n      <ul>\n" + screens + "      </ul>\n")));
+        ViteCode.generate(plan, root, files);
         if (spec.hasFeature("docker")) {
             files.put(root + "Dockerfile", """
                     FROM node:22-alpine AS build

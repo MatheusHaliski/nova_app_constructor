@@ -11,7 +11,7 @@ import type { OpenFile, PreviewBundle } from "./insights-types";
  * abrir o arquivo na linha certa ou dar dois cliques num texto para alterá-lo direto no código.
  */
 
-type View = "data" | "empty" | "loading" | "error" | "slow";
+type View = "data" | "empty" | "loading" | "error" | "slow" | "many" | "long";
 type Role = "user" | "visitor";
 type Request = { method: string; path: string; status: number };
 
@@ -24,6 +24,8 @@ const VIEWS: { id: View; label: string }[] = [
   { id: "data", label: "Com dados" },
   { id: "empty", label: "Sem dados" },
   { id: "loading", label: "Carregando" },
+  { id: "many", label: "Muitos itens" },
+  { id: "long", label: "Textos longos" },
   { id: "slow", label: "API lenta" },
   { id: "error", label: "Erro da API" },
 ];
@@ -73,7 +75,7 @@ export function PreviewPanel({
     const s = state.current;
     if (!s.bundle || !frame.current?.contentWindow) return;
     frame.current.contentWindow.postMessage(
-      { type: "nova:render", sources: s.bundle.sources, mocks: s.bundle.mocks, pages: s.bundle.pages, root: s.bundle.root, route: s.route, view: s.view, role: s.role, editing: s.editing },
+      { type: "nova:render", framework: s.bundle.framework, sources: s.bundle.sources, mocks: s.bundle.mocks, pages: s.bundle.pages, root: s.bundle.root, route: s.route, view: s.view, role: s.role, editing: s.editing },
       "*",
     );
   }, []);
@@ -104,7 +106,6 @@ export function PreviewPanel({
   if (error) return <Alert tone="warning">{error}</Alert>;
   if (!bundle) return <p className="text-sm text-muted">Montando a prévia…</p>;
   if (!bundle.framework) return <Alert tone="info">Este projeto não tem frontend, então não há telas para mostrar.</Alert>;
-  if (bundle.framework !== "nextjs") return <Alert tone="info">A prévia roda telas Next.js. Para React com Vite, ela chega numa próxima etapa.</Alert>;
 
   const srcDoc = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body${editing ? " data-nova-editing" : ""} style="margin:0"><div id="root"></div><script src="${window.location.origin}/preview/runtime.js"></script></body></html>`;
   const pageWidth = WIDTHS.find((w) => w.id === width)!.width;
@@ -115,7 +116,7 @@ export function PreviewPanel({
       <nav aria-label="Páginas do frontend" className="flex min-w-0 flex-col gap-1 rounded-2xl border border-border bg-surface p-2">
         <p className="px-2 pb-1 pt-1 text-[11px] font-bold uppercase tracking-wide text-muted">Páginas · {bundle.pages.length}</p>
         {bundle.pages.map((p) => {
-          const href = p.route.replace(/\[[^\]]+\]/g, "1");
+          const href = p.route.replace(/\[[^\]]+\]/g, "1").replace(/:[^/]+/g, "1");
           return (
             <button key={p.route} onClick={() => setRoute(href)} aria-current={route.split("?")[0] === href ? "page" : undefined}
               className={`rounded-lg px-2 py-2 text-left text-xs ${route.split("?")[0] === href ? "bg-primary/10 font-semibold" : "hover:bg-surface-2"}`}>

@@ -33,23 +33,37 @@ Para subir também os conectores opcionais: `docker compose --profile conectores
 
 ## Rodar sem Docker
 
-Backend (precisa de um MySQL; veja as variáveis em `.env.example`):
+Backend para desenvolvimento, sem MySQL: `mvn spring-boot:run` usa o perfil `dev`, com H2 em memória em modo MySQL
+(os dados somem ao desligar):
 
 ```bash
-cd backend && ./mvnw spring-boot:run
+cd backend && NOVA_ADMIN_EMAIL=admin@nova.local NOVA_ADMIN_PASSWORD=Admin12345 ./mvnw spring-boot:run
 ```
 
-Para experimentar sem MySQL, com H2 em modo MySQL (só desenvolvimento):
-
-```bash
-cd backend && NOVA_ADMIN_EMAIL=admin@nova.test NOVA_ADMIN_PASSWORD=Admin12345 ./mvnw spring-boot:test-run -Dspring-boot.run.profiles=test -Dspring-boot.run.mainClass=com.nova.constructor.TestNovaApplication
-```
+Com MySQL, defina `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME` e `SPRING_DATASOURCE_PASSWORD` (veja `.env.example`).
+No início, o log diz qual IA ficou ativa: `IA do NOVA - Copilot: ClaudeCopilot (modelo: ...)` ou `NoCopilotAi` sem chave.
 
 Frontend:
 
 ```bash
 cd frontend && npm install && npm run dev
 ```
+
+## IA do NOVA (Claude)
+
+O Copilot, a ajuda por campo, a leitura de esboços, "perguntar ao projeto" e "aplicar melhoria com IA" usam o Claude.
+Sem chave, o Copilot cai para regras simples e as outras funções avisam que precisam da IA.
+
+1. Crie uma chave em console.anthropic.com (de preferência uma só para o NOVA, com limite de gasto).
+2. Defina `ANTHROPIC_API_KEY` no ambiente do backend (no `.env` ou no Docker Compose). Na sessão de nuvem do Claude
+   Code use `NOVA_ANTHROPIC_API_KEY`: lá `ANTHROPIC_API_KEY` não chega aos comandos, porque a própria sessão se
+   autentica pela conta da Anthropic. Se as duas existirem, vale `NOVA_ANTHROPIC_API_KEY`. `NOVA_AI_MODEL` troca o
+   modelo (padrão: `claude-opus-5-5`).
+3. Suba o backend e confira: `GET /api/v1/copilot/status` responde `provider: "claude"`.
+4. Rode a verificação real: `python3 scripts/testar_ia.py [http://localhost:8080] [esboco.png]`.
+
+Os testes automáticos (`AiFeaturesIntegrationTest`) cobrem esse caminho com uma IA falsa, sem gastar créditos.
+Quando a IA é usada, o texto da ideia, a imagem do esboço ou os arquivos envolvidos são enviados ao provedor; a tela avisa antes.
 
 ## Testes
 

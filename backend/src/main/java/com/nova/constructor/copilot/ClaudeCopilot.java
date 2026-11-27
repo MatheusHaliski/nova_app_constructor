@@ -12,7 +12,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 /** Copilot com o Claude: saída estruturada para a proposta e texto livre para ajudar em um campo. */
-public class ClaudeCopilot {
+public class ClaudeCopilot implements CopilotAi {
 
     private final AnthropicClient client;
     private final String model;
@@ -22,11 +22,13 @@ public class ClaudeCopilot {
         this.model = model;
     }
 
+    @Override
     public String model() {
         return model;
     }
 
     /** Proposta completa; vazio quando o modelo recusa ou não devolve o formato esperado. */
+    @Override
     public Optional<CopilotDraft> propose(String idea, String type, Catalog catalog) {
         StructuredMessageCreateParams<CopilotDraft> params = MessageCreateParams.builder()
                 .model(model)
@@ -43,6 +45,7 @@ public class ClaudeCopilot {
     }
 
     /** Lê um esboço de tela (imagem) e devolve telas, dados e elementos. */
+    @Override
     public Optional<CopilotDraft.SketchDraft> sketch(byte[] image, String mediaType, String hint) {
         var source = com.anthropic.models.messages.Base64ImageSource.builder()
                 .data(java.util.Base64.getEncoder().encodeToString(image))
@@ -70,6 +73,7 @@ public class ClaudeCopilot {
     }
 
     /** Sugestão de texto para um campo do formulário assistido. */
+    @Override
     public Optional<String> assist(String field, String idea, String name, String current) {
         String instruction = switch (field) {
             case "description" -> "Escreva uma descrição de uma frase (até 200 caracteres) para o app.";

@@ -112,7 +112,7 @@ class ViewerAndNetworkIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON).content("{\"baseVersion\":1}"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.version").value(2))
                 .andExpect(jsonPath("$.sources['frontend/src/app/produtos/page.tsx']", containsString("api<Produto[]>(\"/api/produtos\")")))
-                .andExpect(jsonPath("$.mocks[?(@.path=='/api/produtos')].body[0].nome", hasItem(containsString("exemplo"))));
+                .andExpect(jsonPath("$.mocks[?(@.path=='/api/produtos')].body[0].nome", hasItem("Kit Essencial")));
         mvc.perform(get("/api/v1/projects/" + id).header("Authorization", a.auth())).andExpect(jsonPath("$.currentVersion").value(1));
 
         mvc.perform(post("/api/v1/generator/compare").header("Authorization", a.auth()).contentType(MediaType.APPLICATION_JSON).content("""

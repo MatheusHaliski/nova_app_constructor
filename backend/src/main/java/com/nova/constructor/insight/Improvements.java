@@ -105,7 +105,7 @@ public class Improvements {
         Map<String, Candidate> found = new LinkedHashMap<>();
         List<String> names = new ArrayList<>(ctx.spec() == null ? List.of() : ctx.spec().screensOrEmpty());
         for (Screen s : ctx.screens()) {
-            if (!s.route().equals("/") && !s.route().contains("[")) {
+            if (!s.route().equals("/") && !s.route().contains("[") && !s.route().contains(":")) {
                 names.add(s.route().substring(s.route().lastIndexOf('/') + 1));
             }
         }

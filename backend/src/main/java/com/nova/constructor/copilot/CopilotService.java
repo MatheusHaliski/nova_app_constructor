@@ -30,14 +30,13 @@ public class CopilotService {
     private static final String AI_UNAVAILABLE = "A IA não respondeu agora; esta sugestão veio das regras simples do NOVA.";
     private static final String AI_NOT_CONFIGURED = "A IA do NOVA não está configurada neste ambiente; esta sugestão veio de regras simples.";
 
-    private final ClaudeCopilot claude;
+    private final CopilotAi claude;
     private final RuleBasedCopilot rules;
     private final CatalogService catalog;
     private final PlanService planService;
 
-    public CopilotService(NovaProperties props, RuleBasedCopilot rules, CatalogService catalog, PlanService planService) {
-        String key = props.ai().anthropicApiKey();
-        this.claude = key == null || key.isBlank() ? null : new ClaudeCopilot(key, props.ai().model());
+    public CopilotService(CopilotAi ai, RuleBasedCopilot rules, CatalogService catalog, PlanService planService) {
+        this.claude = ai.available() ? ai : null;
         this.rules = rules;
         this.catalog = catalog;
         this.planService = planService;
