@@ -81,7 +81,7 @@ public class InsightsService {
     };
 
     public InsightsService(ProjectService projects, Analyzer analyzer, Improvements improvements, JsonMapper mapper, JdbcClient jdbc, Clock clock,
-                           NovaProperties props, com.nova.constructor.project.NetworkService network) {
+                           ImprovementAi ai, com.nova.constructor.project.NetworkService network) {
         this.network = network;
         this.projects = projects;
         this.analyzer = analyzer;
@@ -89,8 +89,7 @@ public class InsightsService {
         this.mapper = mapper;
         this.jdbc = jdbc;
         this.clock = clock;
-        String key = props.ai().anthropicApiKey();
-        this.ai = key == null || key.isBlank() ? null : new ClaudeImprovementAi(key, props.ai().model(), mapper);
+        this.ai = ai.available() ? ai : null;
     }
 
     public boolean aiAvailable() {

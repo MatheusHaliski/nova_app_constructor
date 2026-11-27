@@ -51,6 +51,20 @@ Frontend:
 cd frontend && npm install && npm run dev
 ```
 
+## IA do NOVA (Claude)
+
+O Copilot, a ajuda por campo, a leitura de esboços, "perguntar ao projeto" e "aplicar melhoria com IA" usam o Claude.
+Sem chave, o Copilot cai para regras simples e as outras funções avisam que precisam da IA.
+
+1. Crie uma chave em console.anthropic.com (de preferência uma só para o NOVA, com limite de gasto).
+2. Defina `ANTHROPIC_API_KEY` no ambiente do backend (no `.env`, no Docker Compose ou nas variáveis de ambiente da
+   sessão de nuvem). `NOVA_AI_MODEL` troca o modelo (padrão: `claude-opus-5-5`).
+3. Suba o backend e confira: `GET /api/v1/copilot/status` responde `provider: "claude"`.
+4. Rode a verificação real: `python3 scripts/testar_ia.py [http://localhost:8080] [esboco.png]`.
+
+Os testes automáticos (`AiFeaturesIntegrationTest`) cobrem esse caminho com uma IA falsa, sem gastar créditos.
+Quando a IA é usada, o texto da ideia, a imagem do esboço ou os arquivos envolvidos são enviados ao provedor; a tela avisa antes.
+
 ## Testes
 
 ```bash

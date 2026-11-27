@@ -31,6 +31,10 @@ public interface ImprovementAi {
             @JsonPropertyDescription("Linha aproximada, ou 0 se não souber") int line,
             @JsonPropertyDescription("O que está ali, em uma frase") String why) {}
 
+    default boolean available() {
+        return true;
+    }
+
     String model();
 
     /** Responde uma pergunta usando só os arquivos enviados. Vazio se o modelo recusar. */
