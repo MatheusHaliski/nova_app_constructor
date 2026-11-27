@@ -54,7 +54,7 @@ public class RuleBasedCopilot {
         return new CopilotDraft(name(idea), firstSentence(idea), idea.trim(), type != null ? type : mobile ? "APP" : "WEB_APP",
                 "spring-boot", "nextjs", "mysql", connectors, ai, features, List.copyOf(screens), requirements, backlog,
                 "Proposta inicial por regras simples: Spring Boot, Next.js e MySQL (a stack padrão do NOVA), com recursos e "
-                        + "conectores deduzidos das palavras da sua descrição. Revise cada escolha.");
+                        + "conectores deduzidos das palavras da sua descrição. Revise cada escolha.", null, null);
     }
 
     public String assist(String field, String idea, String name) {

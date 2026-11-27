@@ -86,3 +86,35 @@ página "Em construção" com o RF e a fase prevista.
 **Ainda não entregue nesta fase**: perfil público e portfólio, seguir pessoas, convites com papéis por pessoa,
 bloqueio entre usuários, recurso contra decisões de moderação, paginação infinita do feed e inclusão dos dados da rede
 na exportação da conta (LGPD).
+
+## Visualizador do projeto, dados do domínio e propostas de experiência — o que foi entregue
+
+**Criação**
+- Etapa "Dados": entidades com campos e tipos (texto, decimal, data, status com valores…) e requisitos com critério de aceite e prioridade.
+- Telas com modelo (lista, detalhe, formulário, painel, login…), entidade, acesso e menu; tema por tokens (cor, fonte, cantos, espaçamento).
+- O gerador escreve entidades, repositórios, API CRUD, rota de status, migrações (MySQL e PostgreSQL) e testes no Spring Boot,
+  e páginas ligadas à API com menu e tema no Next.js. O Copilot propõe entidades, telas e requisitos.
+- Comparar stacks antes de gerar, começar de um esboço (imagem, com IA) e remixar um projeto da rede.
+
+**Visualizador do projeto** (abas Painel, Melhorias e Prévia)
+- Painel: saúde, caminho até publicar e janelas de camadas, API, dados, telas, fluxos, requisitos, privacidade (LGPD),
+  acessibilidade, dependências e "perguntar ao projeto" (IA).
+- Melhorias: propostas editáveis, código que muda, prévia das telas com a mudança, aplicar como nova versão, dispensar,
+  aplicar com IA e sugestões de outras pessoas da rede.
+- Prévia: o código do frontend da versão roda num iframe isolado com dados de exemplo; larguras, estados (vazio, carregando,
+  erro, API lenta), visitante ou pessoa logada, e edição direta (clicar abre o arquivo na linha; dois cliques alteram o texto).
+- Máquina do tempo nas versões: diferença de arquivos, rotas, entidades e telas.
+
+**Rede e conta**: perfil público com portfólio e projetos fixados, painel inicial que orienta, sessões com dispositivo,
+último acesso e links do portfólio nas configurações.
+
+**Campos que faltavam nas entidades (V5)**: último acesso e troca de senha, site e GitHub (users); dispositivo e último uso
+(refresh_tokens); versão da política e canal (consent_events); última abertura (projects); nome do link (share_links).
+
+**Verificado**: 44 testes do backend; NOVA em MySQL 8.0 com as migrações V1–V5; projetos gerados compilam (Maven e
+next build), 17 testes gerados passam e a API roda em MySQL 8.0 e PostgreSQL 16; prova no navegador com 26 verificações
+(formulário assistido, Copilot, painel, melhorias, prévia com edição, máquina do tempo, Meus projetos, perfil e sessões).
+
+**Ainda não entregue**: histórias que viram teste, revisar pelo celular (tela dedicada), prévia para React com Vite,
+compilação real em sandbox (Fase 6) e o Copilot com IA de verdade (testado só pelas regras, sem chave configurada).
+

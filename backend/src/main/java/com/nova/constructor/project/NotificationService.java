@@ -13,7 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class NotificationService {
 
-    public enum Kind { STAR, FORK, COMMENT, MODERATION }
+    public enum Kind { STAR, FORK, COMMENT, MODERATION, SUGGESTION }
 
     public record Notification(long id, Kind kind, String message, String link, boolean read, Instant createdAt) {}
 

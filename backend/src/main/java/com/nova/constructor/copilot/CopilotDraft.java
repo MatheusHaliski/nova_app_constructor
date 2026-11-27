@@ -18,9 +18,35 @@ public record CopilotDraft(
         @JsonPropertyDescription("Nomes das telas, na ordem de navegação, no máximo 12") List<String> screens,
         @JsonPropertyDescription("Requisitos funcionais, um por item") List<String> requirements,
         @JsonPropertyDescription("Backlog inicial") List<Story> backlog,
-        @JsonPropertyDescription("Explicação curta das escolhas de tecnologia") String rationale) {
+        @JsonPropertyDescription("Explicação curta das escolhas de tecnologia") String rationale,
+        @JsonPropertyDescription("Dados que o app guarda: entidades no singular em PascalCase (ex.: Produto, Pedido), no máximo 8") List<EntityDraft> entities,
+        @JsonPropertyDescription("Caracterização de cada tela listada em screens, na mesma ordem") List<ScreenDraft> screenDetails) {
+
+    public record EntityDraft(
+            @JsonPropertyDescription("Nome no singular, PascalCase, sem acentos") String name,
+            @JsonPropertyDescription("Campos, sem o id (que é automático), no máximo 10") List<FieldDraft> fields) {}
+
+    public record FieldDraft(
+            @JsonPropertyDescription("Nome em camelCase, sem acentos (ex.: dataEntrega)") String name,
+            @JsonPropertyDescription("TEXT, LONG_TEXT, INTEGER, DECIMAL, BOOLEAN, DATE, DATETIME ou STATUS") String type,
+            @JsonPropertyDescription("true se o campo é obrigatório") boolean required,
+            @JsonPropertyDescription("Só para STATUS: valores em MAIÚSCULAS, o primeiro é o inicial; lista vazia nos outros tipos") List<String> values) {}
+
+    public record ScreenDraft(
+            @JsonPropertyDescription("Nome da tela, igual ao de screens") String name,
+            @JsonPropertyDescription("LIST, DETAIL, FORM, DASHBOARD, LOGIN, SIGNUP, LANDING, SETTINGS ou BLANK") String template,
+            @JsonPropertyDescription("Entidade mostrada (para LIST, DETAIL e FORM), ou vazio") String entity,
+            @JsonPropertyDescription("PUBLIC ou AUTH (exige login)") String access) {}
+
 
     public record Story(
             @JsonPropertyDescription("Título curto da história") String title,
             @JsonPropertyDescription("História no formato: Como <pessoa>, quero <ação>, para <benefício>") String story) {}
+
+    /** Telas e dados lidos de um esboço (foto de desenho ou print). */
+    public record SketchDraft(
+            @JsonPropertyDescription("Telas vistas na imagem, na ordem de navegação") List<ScreenDraft> screens,
+            @JsonPropertyDescription("Dados que as telas mostram, como entidades") List<EntityDraft> entities,
+            @JsonPropertyDescription("Elementos de cada tela, um item por tela no formato 'Tela: elemento, elemento'") List<String> elements,
+            @JsonPropertyDescription("Observações sobre cores, layout e o que ficou ilegível, em português") String notes) {}
 }

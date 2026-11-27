@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { NovaIcon, type NovaIconName } from "@/components/icons/NovaIcon";
 import { CatalogIcon } from "@/components/tech/CatalogIcon";
 import { Alert, Button, Card, Field, Input, Modal } from "@/components/ui/ui";
@@ -10,6 +10,11 @@ import type { Catalog, FileEntry, ProjectSummary, VersionSummary } from "@/lib/c
 import type { IconData } from "@/lib/techs";
 import { formatBytes, formatDate } from "./format";
 import { SharePanel } from "@/components/community/SharePanel";
+import { CompareVersions } from "./CompareVersions";
+import { ImprovementsPanel } from "./ImprovementsPanel";
+import { InsightsPanel } from "./InsightsPanel";
+import type { Insights, PreviewBundle } from "./insights-types";
+import { PreviewPanel } from "./PreviewPanel";
 import { VisibilityBadge } from "@/components/community/VisibilityBadge";
 import { StackBadges } from "./StackBadges";
 
@@ -18,20 +23,22 @@ import { StackBadges } from "./StackBadges";
  * (cada alteração cria uma versão; restaurar nunca apaga histórico) e download do projeto, de uma pasta ou versão.
  */
 
-type Tab = "overview" | "files" | "versions" | "share" | "settings";
+type Tab = "overview" | "improvements" | "preview" | "files" | "versions" | "share" | "settings";
 type Problem = { detail?: string };
 type Warning = { path: string; line: number; kind: string };
 type ChangeResult = { version: number; secretWarnings: Warning[] };
 
 const TABS: { id: Tab; label: string; icon: NovaIconName }[] = [
-  { id: "overview", label: "Visão geral", icon: "layers" },
+  { id: "overview", label: "Painel", icon: "layers" },
+  { id: "improvements", label: "Melhorias", icon: "shieldCheck" },
+  { id: "preview", label: "Prévia", icon: "screens" },
   { id: "files", label: "Arquivos", icon: "tree" },
   { id: "versions", label: "Versões", icon: "history" },
   { id: "share", label: "Compartilhar", icon: "share" },
   { id: "settings", label: "Configurações", icon: "sliders" },
 ];
 
-const ORIGIN: Record<VersionSummary["origin"], string> = { GENERATOR: "Gerador", USER: "Edição", RESTORE: "Restauração", FORK: "Fork" };
+const ORIGIN: Record<VersionSummary["origin"], string> = { GENERATOR: "Gerador", USER: "Edição", RESTORE: "Restauração", FORK: "Fork", IMPROVEMENT: "Melhoria" };
 
 async function request<T>(path: string, method = "GET", body?: unknown): Promise<{ ok: true; data: T } | { ok: false; problem: Problem }> {
   const res = await fetch(`/api/backend/${path}`, {
@@ -55,7 +62,7 @@ export function ProjectWorkspace({
   icons,
   initialTab = "overview",
 }: {
-  initialTab?: "overview" | "share";
+  initialTab?: "overview" | "share" | "improvements" | "preview";
   project: ProjectSummary;
   initialTree: FileEntry[];
   initialVersions: VersionSummary[];
@@ -95,6 +102,52 @@ export function ProjectWorkspace({
     },
     [refresh],
   );
+
+  const [insights, setInsights] = useState<Insights | null>(null);
+  const [focus, setFocus] = useState<string | undefined>(undefined);
+  const [fileTarget, setFileTarget] = useState<{ path: string; line?: number; nonce: number } | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    if (tab !== "overview" && tab !== "improvements") return;
+    void request<Insights>(`${base}/insights`).then((r) => {
+      if (alive && r.ok) setInsights(r.data);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [tab, base, project.currentVersion]);
+
+  const openFile = useCallback((path: string, line?: number) => {
+    setFileTarget({ path, line, nonce: Date.now() });
+    setTab("files");
+  }, []);
+
+  const openImprovement = useCallback((id?: string) => {
+    setFocus(id);
+    setTab("improvements");
+  }, []);
+
+  const loadPreview = useCallback(async (): Promise<PreviewBundle | { error: string }> => {
+    const r = await request<PreviewBundle>(`${base}/preview-bundle`);
+    return r.ok ? r.data : { error: r.problem.detail ?? "Não foi possível montar a prévia." };
+  }, [base]);
+
+  /** Edição direta na prévia: troca o texto no arquivo, perto da linha indicada, e salva como nova versão. */
+  const saveText = useCallback(async (file: string, line: number, before: string, after: string): Promise<string | null> => {
+    const current = await request<{ content: string | null; version: number }>(`${base}/file?path=${encodeURIComponent(file)}`);
+    if (!current.ok || current.data.content === null) return "Não consegui abrir o arquivo da tela.";
+    const lines = current.data.content.split("\n");
+    const target = before.trim();
+    const order = [line - 1, ...Array.from({ length: 12 }, (_, i) => line + i), ...Array.from({ length: 6 }, (_, i) => line - 2 - i)];
+    const at = order.find((i) => i >= 0 && i < lines.length && target && lines[i].includes(target));
+    if (at === undefined) return "Não achei esse texto no código (ele pode vir da API). Edite pelo arquivo.";
+    lines[at] = lines[at].replace(target, after.trim().replace(/[{}<>]/g, ""));
+    const saved = await request<ChangeResult>(`${base}/file`, "PUT", { path: file, content: lines.join("\n"), baseVersion: current.data.version });
+    if (!saved.ok) return saved.problem.detail ?? "Não foi possível salvar.";
+    await refresh();
+    return null;
+  }, [base, refresh]);
 
   return (
     <div className="mx-auto max-w-7xl">
@@ -149,9 +202,31 @@ export function ProjectWorkspace({
         </div>
       )}
 
-      {tab === "overview" && <Overview project={project} readme={readme} catalog={catalog} icons={icons} />}
-      {tab === "files" && <Files base={base} tree={tree} version={project.currentVersion} readOnly={readOnly} afterChange={afterChange} />}
-      {tab === "versions" && <Versions base={base} versions={versions} current={project.currentVersion} readOnly={readOnly} afterChange={afterChange} onLabeled={refresh} />}
+      {tab === "overview" && (
+        <div className="flex flex-col gap-5">
+          {insights ? <InsightsPanel insights={insights} projectId={project.id} onOpenFile={openFile} onOpenImprovement={openImprovement} />
+            : <p className="text-sm text-muted">Analisando o projeto…</p>}
+          <Overview project={project} readme={readme} catalog={catalog} icons={icons} />
+        </div>
+      )}
+      {tab === "improvements" && (insights ? (
+        <ImprovementsPanel key={insights.version} insights={insights} projectId={project.id} readOnly={readOnly} initialId={focus} onOpenFile={openFile}
+          onApplied={async (text) => {
+            await refresh();
+            const r = await request<Insights>(`${base}/insights`);
+            if (r.ok) setInsights(r.data);
+            setMessage({ tone: "success", text });
+          }} />
+      ) : <p className="text-sm text-muted">Analisando o projeto…</p>)}
+      {tab === "preview" && <PreviewPanel load={loadPreview} editable={!readOnly} onOpenFile={openFile} onSaveText={saveText} />}
+      {tab === "files" && <Files key={fileTarget?.nonce ?? 0} base={base} tree={tree} version={project.currentVersion} readOnly={readOnly} afterChange={afterChange}
+        initialPath={fileTarget?.path} initialLine={fileTarget?.line} />}
+      {tab === "versions" && (
+        <div className="flex flex-col gap-5">
+          <Versions base={base} versions={versions} current={project.currentVersion} readOnly={readOnly} afterChange={afterChange} onLabeled={refresh} />
+          {versions.length > 1 && <CompareVersions projectId={project.id} versions={versions} />}
+        </div>
+      )}
       {tab === "share" && <SharePanel projectId={project.id} projectName={project.name} disabled={readOnly} onVisibility={(visibility) => setProject((p) => ({ ...p, visibility }))} />}
       {tab === "settings" && <Settings project={project} onChanged={setProject} onMessage={setMessage} />}
     </div>
@@ -284,16 +359,29 @@ function Files({
   version,
   readOnly,
   afterChange,
+  initialPath,
+  initialLine,
 }: {
   base: string;
   tree: FileEntry[];
   version: number;
   readOnly: boolean;
   afterChange: (r: { ok: true; data: ChangeResult } | { ok: false; problem: Problem }, success: string) => Promise<boolean>;
+  initialPath?: string;
+  initialLine?: number;
 }) {
+  const editor = useRef<HTMLTextAreaElement>(null);
   const [filter, setFilter] = useState("");
-  const [open, setOpen] = useState<Set<string>>(() => new Set(tree.map((e) => e.path.split("/")[0])));
-  const [selected, setSelected] = useState<string | null>(tree.find((e) => e.path === "README.md")?.path ?? null);
+  const [open, setOpen] = useState<Set<string>>(() => {
+    const dirs = new Set(tree.map((e) => e.path.split("/")[0]));
+    if (initialPath) {
+      const parts = initialPath.split("/");
+      for (let i = 1; i < parts.length; i++) dirs.add(parts.slice(0, i).join("/"));
+    }
+    return dirs;
+  });
+
+  const [selected, setSelected] = useState<string | null>(initialPath && tree.some((e) => e.path === initialPath) ? initialPath : tree.find((e) => e.path === "README.md")?.path ?? null);
   const [content, setContent] = useState<string | null>(null);
   const [binary, setBinary] = useState(false);
   const [draft, setDraft] = useState<string | null>(null);
@@ -307,6 +395,16 @@ function Files({
   const nodes = useMemo(() => buildTree(filtered), [filtered]);
   const dirty = draft !== null && draft !== content;
   const selectedEntry = tree.find((e) => e.path === selected);
+
+  useEffect(() => {
+    const el = editor.current;
+    if (!el || content === null || !initialLine || selected !== initialPath) return;
+    const lines = content.split("\n");
+    const start = lines.slice(0, initialLine - 1).reduce((n, l) => n + l.length + 1, 0);
+    el.focus();
+    el.setSelectionRange(start, start + (lines[initialLine - 1]?.length ?? 0));
+    el.scrollTop = Math.max(0, (initialLine - 5) * 18);
+  }, [content, initialLine, initialPath, selected]);
 
   useEffect(() => {
     let cancelled = false;
@@ -427,6 +525,7 @@ function Files({
               <p className="p-6 text-sm text-muted">Carregando…</p>
             ) : (
               <textarea
+                ref={editor}
                 aria-label={`Conteúdo de ${selected}`}
                 spellCheck={false}
                 readOnly={readOnly}

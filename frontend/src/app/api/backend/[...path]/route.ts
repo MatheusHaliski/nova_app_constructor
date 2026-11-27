@@ -7,7 +7,7 @@ import { rejectCrossOrigin } from "@/lib/csrf";
  * Ponte autenticada para os componentes do navegador: anexa o access token (cookie httpOnly) e repassa
  * a chamada ao backend. Só libera os grupos de rota usados pela interface.
  */
-const ALLOWED = ["me", "admin", "catalog", "generator", "copilot", "projects", "community"];
+const ALLOWED = ["me", "admin", "catalog", "generator", "copilot", "projects", "community", "people"];
 
 async function forward(request: Request, ctx: RouteContext<"/api/backend/[...path]">) {
   if (request.method !== "GET") {
@@ -22,14 +22,15 @@ async function forward(request: Request, ctx: RouteContext<"/api/backend/[...pat
   const url = new URL(request.url);
   const headers = new Headers({ Accept: "application/json" });
   if (token) headers.set("Authorization", `Bearer ${token}`);
-  const body = request.method === "GET" || request.method === "HEAD" ? undefined : await request.text();
-  if (body) headers.set("Content-Type", "application/json");
+  // Corpo repassado como bytes: JSON e multipart (envio de imagem do esboço) seguem com o tipo original.
+  const body = request.method === "GET" || request.method === "HEAD" ? undefined : await request.arrayBuffer();
+  if (body && body.byteLength > 0) headers.set("Content-Type", request.headers.get("content-type") ?? "application/json");
   let upstream: Response;
   try {
     upstream = await fetch(`${API_URL}/api/v1/${path.map(encodeURIComponent).join("/")}${url.search}`, {
       method: request.method,
       headers,
-      body,
+      body: body && body.byteLength > 0 ? body : undefined,
       cache: "no-store",
     });
   } catch {

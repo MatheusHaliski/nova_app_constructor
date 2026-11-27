@@ -56,6 +56,7 @@ public class ProjectController {
 
     @GetMapping("/{id}")
     public ProjectSummary get(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
+        service.markOpened(id(jwt), id);
         return service.get(id(jwt), id);
     }
 

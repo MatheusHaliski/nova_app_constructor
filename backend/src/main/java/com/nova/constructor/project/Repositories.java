@@ -28,6 +28,11 @@ final class Repositories {
         List<Project> findListed(@Param("q") String q, @Param("tech") String tech, org.springframework.data.domain.Pageable page);
 
         long countByForkedFromId(UUID forkedFromId);
+
+        /** Marca a abertura sem passar pelo @PreUpdate: abrir não conta como alteração. */
+        @Modifying
+        @Query("update Project p set p.lastOpenedAt = :now where p.id = :id and p.ownerId = :ownerId")
+        int markOpened(@Param("id") UUID id, @Param("ownerId") UUID ownerId, @Param("now") java.time.Instant now);
     }
 
     interface VersionRepository extends JpaRepository<ProjectVersion, Long> {

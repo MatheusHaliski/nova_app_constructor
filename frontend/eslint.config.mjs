@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Runtime da prévia: gerado pelo esbuild e executado dentro do iframe isolado.
+    "public/preview/**",
+    "scripts/preview-runtime/**",
   ]),
 ]);
 

@@ -287,7 +287,7 @@ public class CommunityService {
     // ---------------- apoio ----------------
 
     /** Listado na rede (ou do próprio usuário); o resto responde 404, como se não existisse. */
-    private Project load(UUID userId, UUID id) {
+    Project load(UUID userId, UUID id) {
         return projects.findById(id).filter(p -> readable(p, userId))
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Projeto não encontrado."));
     }
@@ -314,7 +314,7 @@ public class CommunityService {
         return new FileContent(path, bytes.length, text == null, text, project.getCurrentVersion());
     }
 
-    private Card card(Project p, UUID userId) {
+    Card card(Project p, UUID userId) {
         String pid = p.getId().toString();
         Map<String, byte[]> files = visible(p);
         long size = files.values().stream().mapToLong(b -> b.length).sum();
@@ -334,7 +334,7 @@ public class CommunityService {
         return jdbc.sql("select count(*) from project_stars where project_id = ? and user_id = ?").params(projectId.toString(), userId.toString()).query(Long.class).single() > 0;
     }
 
-    private String username(UUID userId) {
+    String username(UUID userId) {
         return users.findById(userId).map(User::getUsername).orElse("usuário removido");
     }
 }

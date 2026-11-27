@@ -82,6 +82,18 @@ public class User {
     @Column(name = "terms_accepted_at", nullable = false)
     private Instant termsAcceptedAt;
 
+    @Column(name = "last_login_at")
+    private Instant lastLoginAt;
+
+    @Column(name = "password_changed_at")
+    private Instant passwordChangedAt;
+
+    @Column(name = "website_url", length = 200)
+    private String websiteUrl;
+
+    @Column(name = "github_username", length = 39)
+    private String githubUsername;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -127,9 +139,21 @@ public class User {
         }
     }
 
-    public void registerSuccessfulLogin() {
+    public void registerSuccessfulLogin(Instant now) {
         failedLoginAttempts = 0;
         lockedUntil = null;
+        lastLoginAt = now;
+    }
+
+    public Instant getLastLoginAt() { return lastLoginAt; }
+    public Instant getPasswordChangedAt() { return passwordChangedAt; }
+    public String getWebsiteUrl() { return websiteUrl; }
+    public String getGithubUsername() { return githubUsername; }
+
+    /** Links do portfólio público. */
+    public void updateLinks(String websiteUrl, String githubUsername) {
+        this.websiteUrl = websiteUrl;
+        this.githubUsername = githubUsername;
     }
 
     public UUID getId() { return id; }
@@ -172,7 +196,10 @@ public class User {
         this.emailVerified = false;
     }
 
-    public void changePassword(String passwordHash) { this.passwordHash = passwordHash; }
+    public void changePassword(String passwordHash, Instant now) {
+        this.passwordHash = passwordHash;
+        this.passwordChangedAt = now;
+    }
     public void setProfileVisibility(ProfileVisibility visibility) { this.profileVisibility = visibility; }
     public void setTheme(Theme theme) { this.theme = theme; }
     public void setLanguage(String language) { this.language = language; }

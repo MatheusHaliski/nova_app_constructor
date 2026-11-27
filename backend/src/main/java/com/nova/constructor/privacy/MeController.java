@@ -84,6 +84,17 @@ public class MeController {
         return settings.updatePreferences(id(jwt), body);
     }
 
+    @GetMapping("/sessions")
+    public java.util.List<SettingsDtos.Session> sessions(@AuthenticationPrincipal Jwt jwt) {
+        return settings.sessions(id(jwt), jwt.getClaimAsString("sid"));
+    }
+
+    @DeleteMapping("/sessions/{sessionId}")
+    @org.springframework.web.bind.annotation.ResponseStatus(org.springframework.http.HttpStatus.NO_CONTENT)
+    public void endSession(@AuthenticationPrincipal Jwt jwt, @org.springframework.web.bind.annotation.PathVariable UUID sessionId) {
+        settings.endSession(id(jwt), sessionId);
+    }
+
     @GetMapping("/export")
     public ResponseEntity<Map<String, Object>> export(@AuthenticationPrincipal Jwt jwt) {
         return ResponseEntity.ok()

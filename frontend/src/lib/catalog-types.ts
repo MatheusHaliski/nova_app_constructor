@@ -61,7 +61,18 @@ export type ProjectSpec = {
   ai?: { provider: string; model?: string | null } | null;
   features: string[];
   screens: string[];
+  entities?: EntitySpec[] | null;
+  screenSpecs?: ScreenSpec[] | null;
+  requirements?: RequirementSpec[] | null;
+  theme?: ThemeSpec | null;
 };
+
+export type FieldSpec = { name: string; type: string; required?: boolean; values?: string[] };
+export type EntitySpec = { name: string; fields: FieldSpec[] };
+export type ScreenTemplate = "LIST" | "DETAIL" | "FORM" | "DASHBOARD" | "LOGIN" | "SIGNUP" | "LANDING" | "SETTINGS" | "BLANK";
+export type ScreenSpec = { name: string; template: ScreenTemplate; entity?: string | null; access?: "PUBLIC" | "AUTH"; inMenu?: boolean; purpose?: string | null };
+export type RequirementSpec = { text: string; acceptance?: string | null; priority: "ESSENTIAL" | "IMPORTANT" | "LATER" };
+export type ThemeSpec = { primary: string; font: string; radius: string; density: string };
 
 export type Artifact = { coordinate: string; scope: string; kind: string; reason: string };
 export type Side = {
@@ -113,4 +124,4 @@ export type ProjectSummary = {
 };
 
 export type FileEntry = { path: string; size: number };
-export type VersionSummary = { number: number; label: string | null; origin: "GENERATOR" | "USER" | "RESTORE" | "FORK"; fileCount: number; sizeBytes: number; createdAt: string };
+export type VersionSummary = { number: number; label: string | null; origin: "GENERATOR" | "USER" | "RESTORE" | "FORK" | "IMPROVEMENT"; fileCount: number; sizeBytes: number; createdAt: string };

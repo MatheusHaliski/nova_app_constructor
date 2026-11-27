@@ -86,11 +86,45 @@ public class CopilotService {
         return new AssistResponse(rules.assist(field, idea, name), "regras", claude == null ? AI_NOT_CONFIGURED : AI_UNAVAILABLE);
     }
 
+    public record SketchResult(List<ProjectSpec.ScreenSpec> screens, List<ProjectSpec.EntitySpec> entities, List<String> elements, String notes,
+                               String source) {}
+
+    private static final java.util.Set<String> IMAGE_TYPES = java.util.Set.of("image/png", "image/jpeg", "image/webp", "image/gif");
+
+    /** Começar de um esboço: exige a IA configurada (ler imagem não tem versão por regras). */
+    public SketchResult sketch(byte[] image, String mediaType, String hint) {
+        if (claude == null) {
+            throw new ApiException(org.springframework.http.HttpStatus.CONFLICT, "Ler um esboço exige a IA do NOVA, que não está configurada neste ambiente.");
+        }
+        if (image == null || image.length == 0 || image.length > 5 * 1024 * 1024 || !IMAGE_TYPES.contains(mediaType)) {
+            throw new ApiException(org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT, "Envie uma imagem PNG, JPEG, WebP ou GIF de até 5 MB.");
+        }
+        try {
+            CopilotDraft.SketchDraft d = claude.sketch(image, mediaType, cut(hint, 300))
+                    .orElseThrow(() -> new ApiException(org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT, "A IA não conseguiu ler este esboço."));
+            List<ProjectSpec.ScreenSpec> screens = d.screens() == null ? List.of() : d.screens().stream().filter(s -> s.name() != null).limit(30)
+                    .map(s -> new ProjectSpec.ScreenSpec(cut(s.name(), 60), s.template(), blank(s.entity()) ? null : cut(s.entity(), 40), s.access(), null, null)).toList();
+            List<ProjectSpec.EntitySpec> entities = d.entities() == null ? List.of() : d.entities().stream().limit(8)
+                    .map(e -> new ProjectSpec.EntitySpec(cut(e.name(), 40), e.fields() == null ? List.of() : e.fields().stream().limit(10)
+                            .map(f -> new ProjectSpec.FieldSpec(cut(f.name(), 40), f.type(), f.required(), f.values() == null || f.values().isEmpty() ? null : f.values())).toList()))
+                    .toList();
+            return new SketchResult(screens, entities, d.elements() == null ? List.of() : d.elements(), d.notes(), "claude");
+        } catch (ApiException e) {
+            throw e;
+        } catch (RuntimeException e) {
+            log.warn("Copilot: esboço falhou: {}", e.toString());
+            throw new ApiException(org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE, "A IA não respondeu agora. Tente de novo.");
+        }
+    }
+
     /** Converte o rascunho em especificação e confere contra o catálogo; vazio se a IA escolheu algo inválido. */
     private Optional<Proposal> toProposal(CopilotDraft draft, String source, String notice) {
         Catalog c = catalog.get();
         String frontend = blank(draft.frontendId()) ? null : draft.frontendId();
         String database = blank(draft.databaseId()) ? null : draft.databaseId();
+        List<String> screens = draft.screens() == null ? List.of() : draft.screens().stream().limit(30).map(s -> cut(s, 60)).toList();
+        boolean auth = draft.features() != null && draft.features().contains("auth");
+        DomainSuggestions.Result domain = domainOf(draft, screens, auth);
         ProjectSpec spec = new ProjectSpec(
                 cut(blank(draft.name()) ? "Meu App" : draft.name(), 80), cut(draft.description(), 500), cut(draft.objective(), 4000),
                 "APP".equals(draft.type()) ? "APP" : "WEB_APP", "COPILOT",
@@ -100,7 +134,7 @@ public class CopilotService {
                 draft.connectors() == null ? List.of() : draft.connectors(),
                 draft.usesAi() ? new ProjectSpec.Ai(c.aiProviders().stream().filter(Catalog.AiProvider::available).findFirst().orElseThrow().id(), null) : null,
                 draft.features() == null ? null : draft.features(),
-                draft.screens() == null ? List.of() : draft.screens().stream().limit(30).map(s -> cut(s, 60)).toList());
+                screens, domain.entities(), domain.screens(), domain.requirements(), null);
         try {
             ProjectSpec normalized = planService.plan(spec).spec();
             List<BacklogItem> backlog = draft.backlog() == null ? List.of()
@@ -111,6 +145,30 @@ public class CopilotService {
             log.warn("Copilot: proposta inválida para o catálogo: {}", e.getMessage());
             return Optional.empty();
         }
+    }
+
+    /** Entidades e telas da IA quando vieram completas; senão, deduzidas dos nomes das telas. Requisitos da IA vêm antes. */
+    private static DomainSuggestions.Result domainOf(CopilotDraft draft, List<String> screens, boolean auth) {
+        DomainSuggestions.Result rules = DomainSuggestions.fromScreens(screens, auth);
+        List<ProjectSpec.EntitySpec> entities = rules.entities();
+        List<ProjectSpec.ScreenSpec> details = rules.screens();
+        if (draft.entities() != null && !draft.entities().isEmpty()) {
+            entities = draft.entities().stream().limit(8).map(e -> new ProjectSpec.EntitySpec(cut(e.name(), 40), e.fields() == null ? List.of()
+                    : e.fields().stream().limit(10).map(f -> new ProjectSpec.FieldSpec(cut(f.name(), 40), f.type(), f.required(),
+                            f.values() == null || f.values().isEmpty() ? null : f.values())).toList())).toList();
+            details = draft.screenDetails() == null ? List.of() : draft.screenDetails().stream().filter(s -> s.name() != null)
+                    .map(s -> new ProjectSpec.ScreenSpec(cut(s.name(), 60), s.template(), blank(s.entity()) ? null : s.entity(), s.access(), null, null)).toList();
+        }
+        List<ProjectSpec.Requirement> requirements = new java.util.ArrayList<>();
+        if (draft.requirements() != null) {
+            draft.requirements().stream().limit(30).forEach(r -> requirements.add(new ProjectSpec.Requirement(cut(r, 300), null, "IMPORTANT")));
+        }
+        rules.requirements().forEach(r -> {
+            if (requirements.size() < 50) {
+                requirements.add(r);
+            }
+        });
+        return new DomainSuggestions.Result(entities, details, requirements);
     }
 
     private static boolean blank(String s) {

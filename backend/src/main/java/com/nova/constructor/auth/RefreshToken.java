@@ -42,9 +42,16 @@ public class RefreshToken {
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
+    @Column(name = "user_agent", length = 200)
+    private String userAgent;
+
+    @Column(name = "last_used_at")
+    private Instant lastUsedAt;
+
     protected RefreshToken() {}
 
-    public RefreshToken(UUID userId, UUID familyId, String tokenHash, Instant createdAt, Instant expiresAt) {
+    public RefreshToken(UUID userId, UUID familyId, String tokenHash, Instant createdAt, Instant expiresAt, String userAgent) {
+        this.userAgent = userAgent == null ? null : userAgent.length() > 200 ? userAgent.substring(0, 200) : userAgent;
         this.id = UUID.randomUUID();
         this.userId = userId;
         this.familyId = familyId;
@@ -65,5 +72,11 @@ public class RefreshToken {
 
     public UUID getUserId() { return userId; }
     public UUID getFamilyId() { return familyId; }
+    public String getUserAgent() { return userAgent; }
+    public Instant getLastUsedAt() { return lastUsedAt; }
+    public Instant getCreatedAt() { return createdAt; }
+    public Instant getExpiresAt() { return expiresAt; }
+
+    public void markUsed(Instant now) { this.lastUsedAt = now; }
     public Instant getRevokedAt() { return revokedAt; }
 }
