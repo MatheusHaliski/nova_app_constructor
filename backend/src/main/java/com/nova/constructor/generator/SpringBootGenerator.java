@@ -121,6 +121,7 @@ public class SpringBootGenerator implements StackGenerator {
                     }
                     """, v));
         }
+        DomainCode.spring(plan, pkg, pkgPath, testPath, root, files);
         if (spec.hasFeature("docker")) {
             boolean gradle = "gradle".equals(spec.backend().buildTool());
             String jdk = spec.backend().languageVersion();

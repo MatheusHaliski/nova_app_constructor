@@ -14,7 +14,7 @@ import java.util.regex.Pattern;
  * Código que as melhorias escrevem num backend Spring Boot e numa página Next.js. Os testes gerados usam MockMvc em modo
  * standalone com dublês do Mockito, então rodam sem banco de dados e sem subir a aplicação.
  */
-final class SpringCode {
+public final class SpringCode {
 
     private SpringCode() {}
 
@@ -25,7 +25,7 @@ final class SpringCode {
      * @param statusField campo de status: fica fora do corpo de criar e editar, muda só pelo endpoint de status
      * @param primitive   o setter da entidade recebe um tipo primitivo
      */
-    record F(String name, FieldKind kind, String javaType, boolean required, String enumRef, List<String> values, boolean statusField,
+    public record F(String name, FieldKind kind, String javaType, boolean required, String enumRef, List<String> values, boolean statusField,
              boolean primitive) {
 
         String pascal() {
@@ -51,7 +51,7 @@ final class SpringCode {
         }
     }
 
-    static String javaType(FieldKind kind) {
+    public static String javaType(FieldKind kind) {
         return switch (kind) {
             case INTEGER -> "Integer";
             case LONG -> "Long";
@@ -92,7 +92,7 @@ final class SpringCode {
 
     // ---------------- entidade e repositório novos ----------------
 
-    static String entity(String pkg, String entity, String table, List<F> fields, boolean jpa) {
+    public static String entity(String pkg, String entity, String table, List<F> fields, boolean jpa) {
         Set<String> imports = new TreeSet<>();
         typeImports(imports, fields.stream().map(f -> new F(f.name(), f.kind(), f.javaType(), f.required(), null, null, false, false)).toList());
         boolean hasEnum = fields.stream().anyMatch(f -> f.kind() == FieldKind.ENUM);
@@ -156,7 +156,7 @@ final class SpringCode {
         return sb.append("}\n").toString();
     }
 
-    static String repository(String pkg, String entity, boolean jpa) {
+    public static String repository(String pkg, String entity, boolean jpa) {
         if (jpa) {
             return header(pkg, Set.of("org.springframework.data.jpa.repository.JpaRepository"))
                     + "/** Acesso ao banco para " + entity + ". */\npublic interface " + entity + "Repository extends JpaRepository<" + entity + ", Long> {\n}\n";
@@ -180,7 +180,7 @@ final class SpringCode {
     /**
      * @param extraImports imports da entidade e do repositório quando estão em outro pacote
      */
-    static String controller(String pkg, String className, String entity, String path, Set<Operation> ops, List<F> fields, String idType,
+    public static String controller(String pkg, String className, String entity, String path, Set<Operation> ops, List<F> fields, String idType,
                              Set<String> extraImports) {
         List<F> body = fields.stream().filter(f -> !f.statusField()).toList();
         boolean writes = ops.contains(Operation.CREATE) || ops.contains(Operation.UPDATE);
@@ -288,7 +288,7 @@ final class SpringCode {
         return sb.append("}\n").toString();
     }
 
-    static String describe(Set<Operation> ops) {
+    public static String describe(Set<Operation> ops) {
         List<String> words = new ArrayList<>();
         for (Operation op : ops) {
             words.add(switch (op) {
@@ -304,7 +304,7 @@ final class SpringCode {
 
     // ---------------- status ----------------
 
-    static String statusController(String pkg, String className, String entity, F field, String method, String path, String var,
+    public static String statusController(String pkg, String className, String entity, F field, String method, String path, String var,
                                    List<String> allowed, String idType, Set<String> extraImports) {
         boolean isEnum = field.kind() == FieldKind.ENUM;
         Set<String> imports = new TreeSet<>(extraImports);
@@ -352,7 +352,7 @@ final class SpringCode {
         return sb.toString();
     }
 
-    static String mappingOf(String method) {
+    public static String mappingOf(String method) {
         return switch (method) {
             case "PUT" -> "PutMapping";
             case "POST" -> "PostMapping";
@@ -364,7 +364,7 @@ final class SpringCode {
 
     record Id(String literal, String path, String declaration) {}
 
-    static Id idOf(String idType) {
+    public static Id idOf(String idType) {
         return switch (idType) {
             case "Integer", "int" -> new Id("1", "1", "");
             case "String" -> new Id("\"1\"", "1", "");
@@ -382,7 +382,7 @@ final class SpringCode {
         return imports;
     }
 
-    static String resourceTest(String pkg, String controller, String entity, String path, Set<Operation> ops, List<F> fields, String idType,
+    public static String resourceTest(String pkg, String controller, String entity, String path, Set<Operation> ops, List<F> fields, String idType,
                                Set<String> extraImports) {
         Set<String> imports = testImports(extraImports);
         Id id = idOf(idType);
@@ -438,7 +438,7 @@ final class SpringCode {
                 + tests.toString().stripTrailing() + "\n}\n";
     }
 
-    static String statusTest(String pkg, String controller, String entity, F field, String method, String path, String var, List<String> allowed,
+    public static String statusTest(String pkg, String controller, String entity, F field, String method, String path, String var, List<String> allowed,
                              List<String> all, String idType, Set<String> extraImports) {
         Set<String> imports = testImports(extraImports);
         imports.addAll(List.of("java.util.Optional", "static org.mockito.ArgumentMatchers.any", "static org.mockito.Mockito.when",
@@ -474,7 +474,7 @@ final class SpringCode {
     }
 
     /** Teste de fumaça dos GETs sem parâmetros de um controller existente, com as dependências do construtor como dublês. */
-    static String getsTest(String pkg, String controller, List<Facts.CtorParam> ctor, List<String> paths, Set<String> extraImports) {
+    public static String getsTest(String pkg, String controller, List<Facts.CtorParam> ctor, List<String> paths, Set<String> extraImports) {
         Set<String> imports = testImports(extraImports);
         imports.add("static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get");
         StringBuilder sb = new StringBuilder(header(pkg, imports));
@@ -494,7 +494,7 @@ final class SpringCode {
         return sb.append("}\n").toString();
     }
 
-    static String sample(F f, int i) {
+    public static String sample(F f, int i) {
         return switch (f.kind()) {
             case INTEGER, LONG -> String.valueOf(i);
             case DECIMAL, DOUBLE -> String.valueOf(10 * i) + ".5";
@@ -508,7 +508,7 @@ final class SpringCode {
         };
     }
 
-    static String validJson(List<F> fields) {
+    public static String validJson(List<F> fields) {
         List<String> parts = new ArrayList<>();
         for (F f : fields) {
             parts.add("\"" + f.name() + "\":" + sample(f, 1));
@@ -516,13 +516,13 @@ final class SpringCode {
         return "{" + String.join(",", parts) + "}";
     }
 
-    static String javaString(String s) {
+    public static String javaString(String s) {
         return s.replace("\\", "\\\\").replace("\"", "\\\"");
     }
 
     // ---------------- banco ----------------
 
-    static String migration(String database, String table, List<F> fields) {
+    public static String migration(String database, String table, List<F> fields) {
         boolean postgres = "postgresql".equals(database);
         StringBuilder sb = new StringBuilder("-- Tabela criada pelo NOVA a partir da aba Melhorias.\nCREATE TABLE ").append(table).append(" (\n");
         sb.append(postgres ? "    id BIGINT GENERATED BY DEFAULT AS IDENTITY,\n" : "    id BIGINT NOT NULL AUTO_INCREMENT,\n");
@@ -546,7 +546,7 @@ final class SpringCode {
         return sb.toString();
     }
 
-    static int nextMigration(Sources src, String dir) {
+    public static int nextMigration(Sources src, String dir) {
         int max = 0;
         Matcher m = Pattern.compile("V(\\d+)__").matcher("");
         for (String p : src.paths(Pattern.quote(dir) + "V\\d+__.+\\.sql")) {
@@ -565,7 +565,7 @@ final class SpringCode {
      *
      * @return o arquivo alterado, ou {@code null} quando o formato não permite editar com segurança
      */
-    static String permit(String text, List<String[]> rules) {
+    public static String permit(String text, List<String[]> rules) {
         int at = text.indexOf(".anyRequest()");
         if (at < 0) {
             return null;
@@ -603,7 +603,7 @@ final class SpringCode {
 
     // ---------------- página Next.js ----------------
 
-    static String nextListPage(String route, String title, String apiPath, String entity, List<F> columns) {
+    public static String nextListPage(String route, String title, String apiPath, String entity, List<F> columns) {
         String component = Names.pascal(route.isBlank() || route.equals("/") ? "inicio" : route) + "Page";
         StringBuilder type = new StringBuilder("type ").append(entity).append(" = {\n  id: number | string;\n");
         for (F f : columns) {
@@ -639,7 +639,7 @@ final class SpringCode {
         };
     }
 
-    private static String cell(F f) {
+    public static String cell(F f) {
         String v = "item." + f.name();
         if (f.kind() == FieldKind.BOOLEAN) {
             return "{" + v + " ? \"Sim\" : \"Não\"}";
@@ -650,12 +650,23 @@ final class SpringCode {
         return "{" + v + " ?? \"\"}";
     }
 
-    static String label(String name) {
-        String spaced = String.join(" ", Names.words(name)).toLowerCase(Locale.ROOT);
+    /** Palavras comuns em nomes de campo que perdem o acento no código. */
+    private static final java.util.Map<String, String> ACCENTS = java.util.Map.ofEntries(java.util.Map.entry("preco", "preço"),
+            java.util.Map.entry("descricao", "descrição"), java.util.Map.entry("observacao", "observação"), java.util.Map.entry("titulo", "título"),
+            java.util.Map.entry("conteudo", "conteúdo"), java.util.Map.entry("endereco", "endereço"), java.util.Map.entry("numero", "número"),
+            java.util.Map.entry("situacao", "situação"), java.util.Map.entry("codigo", "código"), java.util.Map.entry("servico", "serviço"),
+            java.util.Map.entry("horario", "horário"), java.util.Map.entry("usuario", "usuário"), java.util.Map.entry("comentario", "comentário"),
+            java.util.Map.entry("historico", "histórico"), java.util.Map.entry("medico", "médico"), java.util.Map.entry("categoria", "categoria"),
+            java.util.Map.entry("validade", "validade"), java.util.Map.entry("inicio", "início"), java.util.Map.entry("termino", "término"),
+            java.util.Map.entry("emissao", "emissão"), java.util.Map.entry("telefone", "telefone"), java.util.Map.entry("credito", "crédito"));
+
+    public static String label(String name) {
+        String spaced = String.join(" ", java.util.Arrays.stream(Names.words(name)).map(w -> ACCENTS.getOrDefault(w.toLowerCase(Locale.ROOT),
+                w.toLowerCase(Locale.ROOT))).toList());
         return spaced.isEmpty() ? name : Character.toUpperCase(spaced.charAt(0)) + spaced.substring(1);
     }
 
-    static String jsx(String text) {
+    public static String jsx(String text) {
         return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("{", "&#123;").replace("}", "&#125;");
     }
 }

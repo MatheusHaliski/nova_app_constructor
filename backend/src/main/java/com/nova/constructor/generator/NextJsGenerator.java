@@ -122,6 +122,7 @@ public class NextJsGenerator implements StackGenerator {
                 "title", jsx(spec.name()),
                 "description", jsx(spec.description() == null ? "Projeto gerado pelo NOVA." : spec.description()),
                 "nav", screens.isEmpty() ? "" : "      <ul>\n" + links + "      </ul>\n")));
+        DomainCode.next(plan, root, files);
         if (spec.hasFeature("docker")) {
             files.put(root + "Dockerfile", """
                     FROM node:22-alpine AS build

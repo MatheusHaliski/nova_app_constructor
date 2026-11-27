@@ -14,7 +14,7 @@ final class FrontendReader {
     private static final Pattern API_CALL = Pattern.compile("[\"'`](/api/[^\"'`\\s?]*)");
     private static final Pattern H1 = Pattern.compile("<h1[^>]*>\\s*([^<{]+?)\\s*</h1>");
     private static final Pattern EMPTY = Pattern.compile("\\.length\\s*===?\\s*0|\\.length\\s*<\\s*1|!\\s*[\\w.?]+\\.length\\b|\\.length\\s*\\?|(?i)nenhum|nenhuma|vazi[oa]|empty");
-    private static final Pattern ERROR = Pattern.compile("\\bcatch\\b|\\berror\\b|\\bErro\\b|\\berro\\b|isError|onError|error\\.tsx");
+    private static final Pattern ERROR = Pattern.compile("\\bcatch\\b|\\berror\\b|\\bErro\\b|\\berro\\b|isError|onError|error\\.tsx|notFound\\(");
     private static final Pattern ROUTE = Pattern.compile("<Route\\s+[^>]*path=[\"']([^\"']+)[\"'][^>]*element=\\{\\s*<(\\w+)");
 
     private FrontendReader() {}
@@ -88,7 +88,9 @@ final class FrontendReader {
         }
         String title = Sources.first(H1, text, 1);
         boolean siblingError = src.any(java.util.regex.Pattern.quote(path.substring(0, path.lastIndexOf('/') + 1)) + "error\\.(tsx|jsx)");
-        return new Screen(route, path, title == null ? null : title.trim(), calls, EMPTY.matcher(text).find(),
+        // Lista vazia só importa em telas que mostram uma coleção (percorrem itens com map).
+        boolean showsList = text.contains(".map(");
+        return new Screen(route, path, title == null ? null : title.trim(), calls, !showsList || EMPTY.matcher(text).find(),
                 siblingError || ERROR.matcher(text).find(), text.contains(PLACEHOLDER));
     }
 }

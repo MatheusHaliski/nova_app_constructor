@@ -155,6 +155,10 @@ public class PlanService {
             env.add(new Env("API_URL", "http://localhost:8080", false, "Frontend"));
         }
 
+        DomainRules.Domain domain = DomainRules.normalize(input, frontendSide != null, features.contains("auth"), backend.id(), warnings);
+        if (!domain.entities().isEmpty() && "spring-boot".equals(backend.id()) && !hasDatabase) {
+            warnings.add("Sem banco escolhido, as entidades ficam guardadas em memória e somem quando a aplicação reinicia.");
+        }
         String slug = slug(input.name());
         ProjectSpec normalized = new ProjectSpec(input.name().trim(), blankToNull(input.description()), blankToNull(input.objective()),
                 input.type(), input.mode() == null ? "ASSISTED" : input.mode(),
@@ -164,7 +168,7 @@ public class PlanService {
                 connectors.stream().map(Catalog.Connector::id).toList(),
                 ai == null ? null : new ProjectSpec.Ai(ai.id(), aiModel),
                 features,
-                frontendSide == null ? List.of() : cleanScreens(input.screensOrEmpty()));
+                domain.screens(), domain.entities(), domain.screenSpecs(), domain.requirements(), domain.theme());
 
         Side backendSide = new Side(backend.id(), backend.name(), backendVersion, language.name(), languageVersion,
                 List.copyOf(deps.values()), List.copyOf(plugins.values()),
@@ -248,16 +252,6 @@ public class PlanService {
             throw invalid(label + " inválida: " + requested + ". Opções: " + String.join(", ", options) + ".");
         }
         return requested;
-    }
-
-    private static List<String> cleanScreens(List<String> screens) {
-        Set<String> out = new LinkedHashSet<>();
-        for (String s : screens) {
-            if (s != null && !s.isBlank()) {
-                out.add(s.trim());
-            }
-        }
-        return List.copyOf(out);
     }
 
     private static String blankToNull(String s) {

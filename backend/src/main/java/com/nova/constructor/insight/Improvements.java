@@ -61,7 +61,8 @@ public class Improvements {
     static final String AUTH = "auth";
 
     private static final Set<String> STOP_WORDS = Set.of("meu", "meus", "minha", "minhas", "my", "lista", "listagem", "de", "da", "do", "das",
-            "dos", "e", "gerenciar", "gestao", "tela", "pagina", "todos", "todas", "ver", "the", "of");
+            "dos", "e", "gerenciar", "gestao", "tela", "pagina", "todos", "todas", "ver", "the", "of", "detalhe", "detalhes", "novo", "nova", "criar",
+            "editar", "adicionar", "cadastrar", "registrar", "detail", "new", "edit");
     private static final Set<String> NON_DATA = Set.of("home", "inicio", "login", "entrar", "cadastro", "cadastrar", "registro", "signup",
             "perfil", "profile", "conta", "configuracao", "configuraco", "setting", "sobre", "about", "contato", "contact", "ajuda", "help",
             "dashboard", "painel", "admin", "checkout", "carrinho", "cart", "busca", "search", "pesquisa", "landing", "faq", "termo",
@@ -111,7 +112,17 @@ public class Improvements {
         Set<String> known = new LinkedHashSet<>();
         ctx.resources().forEach(r -> known.add(Names.key(r.name())));
         ctx.facts().entities.forEach(e -> known.add(Names.key(e.name())));
+        Set<String> linked = new LinkedHashSet<>();
+        if (ctx.spec() != null) {
+            ctx.spec().screenSpecsOrEmpty().stream().filter(s -> s.entity() != null).forEach(s -> {
+                linked.add(s.name());
+                linked.add(PlanService.slug(s.name()));
+            });
+        }
         for (String name : names) {
+            if (linked.contains(name)) {
+                continue;
+            }
             List<String> words = new ArrayList<>();
             for (String w : Names.words(name)) {
                 String n = Names.normalize(w);
@@ -745,8 +756,7 @@ public class Improvements {
         if (!features.contains(feature)) {
             features.add(feature);
         }
-        ProjectSpec spec = new ProjectSpec(s.name(), s.description(), s.objective(), s.type(), s.mode(), s.backend(), s.frontend(), s.database(),
-                s.connectors(), s.ai(), features, s.screens());
+        ProjectSpec spec = s.withFeatures(features);
         Map<String, String> generated;
         try {
             generated = generator.generate(spec).files();
@@ -945,7 +955,7 @@ public class Improvements {
         return Names.constant(String.join("_", keys).replace('.', '_').replace('-', '_'));
     }
 
-    static List<Map<String, Object>> defaultFields(String key) {
+    public static List<Map<String, Object>> defaultFields(String key) {
         List<Map<String, Object>> f = new ArrayList<>();
         if (key.matches(".*(produt|item|servic|plano|curso|livro|prato|cardapio|menu|oferta|imove|veicul).*")) {
             f.add(field("nome", "TEXT", true, null));
@@ -975,7 +985,7 @@ public class Improvements {
         return f;
     }
 
-    static List<String> defaultStatuses(String key) {
+    public static List<String> defaultStatuses(String key) {
         if (key.matches(".*(reserva|agendament|consulta|evento).*")) {
             return List.of("AGENDADO", "CONFIRMADO", "CONCLUIDO", "CANCELADO");
         }

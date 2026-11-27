@@ -91,6 +91,9 @@ public class CopilotService {
         Catalog c = catalog.get();
         String frontend = blank(draft.frontendId()) ? null : draft.frontendId();
         String database = blank(draft.databaseId()) ? null : draft.databaseId();
+        List<String> screens = draft.screens() == null ? List.of() : draft.screens().stream().limit(30).map(s -> cut(s, 60)).toList();
+        boolean auth = draft.features() != null && draft.features().contains("auth");
+        DomainSuggestions.Result domain = domainOf(draft, screens, auth);
         ProjectSpec spec = new ProjectSpec(
                 cut(blank(draft.name()) ? "Meu App" : draft.name(), 80), cut(draft.description(), 500), cut(draft.objective(), 4000),
                 "APP".equals(draft.type()) ? "APP" : "WEB_APP", "COPILOT",
@@ -100,7 +103,7 @@ public class CopilotService {
                 draft.connectors() == null ? List.of() : draft.connectors(),
                 draft.usesAi() ? new ProjectSpec.Ai(c.aiProviders().stream().filter(Catalog.AiProvider::available).findFirst().orElseThrow().id(), null) : null,
                 draft.features() == null ? null : draft.features(),
-                draft.screens() == null ? List.of() : draft.screens().stream().limit(30).map(s -> cut(s, 60)).toList());
+                screens, domain.entities(), domain.screens(), domain.requirements(), null);
         try {
             ProjectSpec normalized = planService.plan(spec).spec();
             List<BacklogItem> backlog = draft.backlog() == null ? List.of()
@@ -111,6 +114,30 @@ public class CopilotService {
             log.warn("Copilot: proposta inválida para o catálogo: {}", e.getMessage());
             return Optional.empty();
         }
+    }
+
+    /** Entidades e telas da IA quando vieram completas; senão, deduzidas dos nomes das telas. Requisitos da IA vêm antes. */
+    private static DomainSuggestions.Result domainOf(CopilotDraft draft, List<String> screens, boolean auth) {
+        DomainSuggestions.Result rules = DomainSuggestions.fromScreens(screens, auth);
+        List<ProjectSpec.EntitySpec> entities = rules.entities();
+        List<ProjectSpec.ScreenSpec> details = rules.screens();
+        if (draft.entities() != null && !draft.entities().isEmpty()) {
+            entities = draft.entities().stream().limit(8).map(e -> new ProjectSpec.EntitySpec(cut(e.name(), 40), e.fields() == null ? List.of()
+                    : e.fields().stream().limit(10).map(f -> new ProjectSpec.FieldSpec(cut(f.name(), 40), f.type(), f.required(),
+                            f.values() == null || f.values().isEmpty() ? null : f.values())).toList())).toList();
+            details = draft.screenDetails() == null ? List.of() : draft.screenDetails().stream().filter(s -> s.name() != null)
+                    .map(s -> new ProjectSpec.ScreenSpec(cut(s.name(), 60), s.template(), blank(s.entity()) ? null : s.entity(), s.access(), null, null)).toList();
+        }
+        List<ProjectSpec.Requirement> requirements = new java.util.ArrayList<>();
+        if (draft.requirements() != null) {
+            draft.requirements().stream().limit(30).forEach(r -> requirements.add(new ProjectSpec.Requirement(cut(r, 300), null, "IMPORTANT")));
+        }
+        rules.requirements().forEach(r -> {
+            if (requirements.size() < 50) {
+                requirements.add(r);
+            }
+        });
+        return new DomainSuggestions.Result(entities, details, requirements);
     }
 
     private static boolean blank(String s) {
