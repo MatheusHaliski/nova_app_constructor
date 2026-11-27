@@ -117,6 +117,41 @@ public class ProjectService {
         return decodeText(bytes);
     }
 
+    /** Uma versão do projeto com o conteúdo de todos os arquivos (para a análise e as melhorias). */
+    public record Snapshot(Project project, int version, Map<String, byte[]> files) {}
+
+    @Transactional(readOnly = true)
+    public Snapshot snapshot(UUID ownerId, UUID id, Integer versionNumber) {
+        Project project = load(ownerId, id);
+        ProjectVersion v = version(project, versionNumber);
+        return new Snapshot(project, v.getNumber(), filesOf(v));
+    }
+
+    /**
+     * Grava várias alterações de uma vez como uma nova versão (usado pelas melhorias).
+     *
+     * @param upserts caminho → conteúdo novo; arquivos que não aparecem ficam como estão
+     */
+    @Transactional
+    public ChangeResult applyChanges(UUID ownerId, UUID id, int baseVersion, Map<String, String> upserts, String label, ProjectVersion.Origin origin) {
+        Project project = editable(ownerId, id, baseVersion);
+        Map<String, byte[]> files = currentFiles(project);
+        List<SecretScanner.Finding> warnings = new ArrayList<>();
+        for (Map.Entry<String, String> e : upserts.entrySet()) {
+            String path = PathRules.normalize(e.getKey());
+            if (PathRules.isSecretFile(path)) {
+                throw new ApiException(HttpStatus.UNPROCESSABLE_CONTENT, "Melhorias não escrevem em arquivos de segredos: " + path);
+            }
+            byte[] bytes = e.getValue().getBytes(StandardCharsets.UTF_8);
+            if (bytes.length > MAX_FILE_BYTES) {
+                throw new ApiException(HttpStatus.CONTENT_TOO_LARGE, "Arquivo acima de 1 MB: " + path);
+            }
+            files.put(path, bytes);
+            warnings.addAll(SecretScanner.scan(path, e.getValue()));
+        }
+        return new ChangeResult(writeVersion(project, baseVersion + 1, label, origin, ownerId, files), warnings);
+    }
+
     @Transactional(readOnly = true)
     public List<ProjectSummary> list(UUID ownerId, Project.Status status) {
         return projects.findByOwnerIdAndStatusOrderByUpdatedAtDesc(ownerId, status).stream().map(this::summary).toList();

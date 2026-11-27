@@ -307,6 +307,8 @@ public class SpringBootGenerator implements StackGenerator {
         StringBuilder y = new StringBuilder();
         y.append("# Valores sensíveis vêm de variáveis de ambiente (veja .env.example); nada de segredo neste arquivo.\n");
         y.append("spring:\n  application:\n    name: ").append(plan.slug()).append("\n");
+        // Erros de validação voltam como ProblemDetail (RFC 9457), com a mensagem escrita no código.
+        y.append("  mvc:\n    problemdetails:\n      enabled: true\n");
         if (spec.database() != null) {
             y.append("  datasource:\n    url: ${DATABASE_URL}\n    username: ${DATABASE_USER}\n    password: ${DATABASE_PASSWORD}\n");
             if (packages.contains("data-jpa")) {
@@ -368,7 +370,7 @@ public class SpringBootGenerator implements StackGenerator {
             import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
             import org.springframework.security.web.SecurityFilterChain;
 
-            /** API sem estado, protegida por token JWT. Rotas públicas: status, login, health e documentação. */
+            /** API sem estado, protegida por token JWT. Rotas públicas: status, login, health, documentação e a página de erro (para 404 e 400 chegarem a quem chamou). */
             @Configuration
             public class SecurityConfig {
 
@@ -377,7 +379,7 @@ public class SpringBootGenerator implements StackGenerator {
                     http.csrf(csrf -> csrf.disable())
                             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                             .authorizeHttpRequests(auth -> auth
-                                    .requestMatchers("/api/status", "/api/auth/**", "/actuator/health/**",
+                                    .requestMatchers("/error", "/api/status", "/api/auth/**", "/actuator/health/**",
                                             "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                                     .anyRequest().authenticated())
                             .oauth2ResourceServer(oauth -> oauth.jwt(jwt -> {}));

@@ -18,7 +18,7 @@ import org.hibernate.type.SqlTypes;
 @Table(name = "project_versions")
 public class ProjectVersion {
 
-    public enum Origin { GENERATOR, USER, RESTORE, FORK }
+    public enum Origin { GENERATOR, USER, RESTORE, FORK, IMPROVEMENT }
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
