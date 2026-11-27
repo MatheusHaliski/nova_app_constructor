@@ -13,7 +13,7 @@ import type { NextRequest } from "next/server";
 const ACCESS = "nova_at";
 const REFRESH = "nova_rt";
 const API_URL = process.env.NOVA_API_URL ?? "http://localhost:8080";
-const PRIVATE = ["/novo-app", "/projetos", "/painel", "/configuracoes", "/admin", "/tecnologias", "/em-breve", "/notificacoes", "/feed", "/explorar", "/estrelas", "/compartilhados", "/comunidade", "/api/backend", "/api/preferences"];
+const PRIVATE = ["/novo-app", "/projetos", "/painel", "/configuracoes", "/admin", "/tecnologias", "/em-breve", "/notificacoes", "/feed", "/explorar", "/estrelas", "/compartilhados", "/comunidade", "/pessoas", "/perfil", "/api/backend", "/api/preferences"];
 const GUEST_ONLY = ["/login", "/cadastro"];
 
 function matches(path: string, prefixes: string[]) {
@@ -43,7 +43,7 @@ export async function proxy(request: NextRequest) {
     try {
       const res = await fetch(`${API_URL}/api/v1/auth/refresh`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "User-Agent": request.headers.get("user-agent") ?? "" },
         body: JSON.stringify({ refreshToken: refresh }),
         cache: "no-store",
       });

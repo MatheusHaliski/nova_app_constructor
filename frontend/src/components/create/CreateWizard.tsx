@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useMemo, useState, type ReactNode } from "react";
+import { DomainStep, ScreenSpecsEditor, SketchUpload, StackComparison, ThemeEditor } from "./DomainEditors";
 import { NovaIcon, type NovaIconName } from "@/components/icons/NovaIcon";
 import { CatalogIcon } from "@/components/tech/CatalogIcon";
 import { Alert, Button, Card, Field, Input, Textarea, Toggle } from "@/components/ui/ui";
@@ -20,7 +21,7 @@ import type { IconData } from "@/lib/techs";
 type Mode = "COPILOT" | "ASSISTED";
 type Problem = { detail?: string; errors?: Record<string, string> };
 
-const STEPS = ["Modo", "Projeto", "Tecnologias", "Pacotes e conectores", "Telas", "Revisão"] as const;
+const STEPS = ["Modo", "Projeto", "Tecnologias", "Pacotes e conectores", "Dados", "Telas", "Revisão"] as const;
 
 async function call<T>(path: string, body: unknown): Promise<{ ok: true; data: T } | { ok: false; problem: Problem }> {
   const res = await fetch(`/api/backend/${path}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
@@ -57,13 +58,17 @@ function initialSpec(catalog: Catalog, mode: Mode): ProjectSpec {
     ai: null,
     features: catalog.features.filter((f) => f.default).map((f) => f.id),
     screens: [],
+    entities: [],
+    screenSpecs: [],
+    requirements: [],
+    theme: { primary: "#1554F0", font: "system", radius: "MD", density: "COMFORTABLE" },
   };
 }
 
-export function CreateWizard({ catalog, icons, initialMode }: { catalog: Catalog; icons: Record<string, IconData>; initialMode: Mode | null }) {
+export function CreateWizard({ catalog, icons, initialMode, remix }: { catalog: Catalog; icons: Record<string, IconData>; initialMode: Mode | null; remix?: { spec: ProjectSpec; origin: string } | null }) {
   const router = useRouter();
-  const [step, setStep] = useState(initialMode ? 1 : 0);
-  const [spec, setSpec] = useState<ProjectSpec>(() => initialSpec(catalog, initialMode ?? "ASSISTED"));
+  const [step, setStep] = useState(initialMode || remix ? 1 : 0);
+  const [spec, setSpec] = useState<ProjectSpec>(() => (remix ? { ...initialSpec(catalog, "ASSISTED"), ...remix.spec, mode: "ASSISTED" } : initialSpec(catalog, initialMode ?? "ASSISTED")));
   const [idea, setIdea] = useState("");
   const [proposal, setProposal] = useState<Proposal | null>(null);
   const [plan, setPlan] = useState<Plan | null>(null);
@@ -91,7 +96,7 @@ export function CreateWizard({ catalog, icons, initialMode }: { catalog: Catalog
   }
 
   function chooseFrontend(id: string | null) {
-    if (!id) return update({ frontend: null, screens: [] });
+    if (!id) return update({ frontend: null, screens: [], screenSpecs: [] });
     const next = catalog.frontends.find((f) => f.id === id)!;
     update({ frontend: { id, version: next.defaultVersion, packages: defaultPackages(next) } });
   }
@@ -120,7 +125,9 @@ export function CreateWizard({ catalog, icons, initialMode }: { catalog: Catalog
     setBusy(null);
     if (!result.ok) return setError(result.problem.detail ?? "Não foi possível sugerir agora.");
     if (field === "screens") {
-      update({ screens: result.data.suggestion.split("\n").map((s) => s.replace(/^[-*\d.\s]+/, "").trim()).filter(Boolean).slice(0, 30) });
+      // Tira só marcadores de lista ("1.", "-", "*"), sem apagar números que fazem parte do nome (ex.: "3D Viewer").
+      const names = result.data.suggestion.split("\n").map((s) => s.replace(/^\s*(?:[-*•]|\d+[.)])\s+/, "").trim().slice(0, 60)).filter(Boolean).slice(0, 30);
+      update({ screens: names, screenSpecs: names.map((name) => spec.screenSpecs?.find((x) => x.name === name) ?? { name, template: "BLANK" as const, inMenu: true }) });
     } else {
       update({ [field]: result.data.suggestion.slice(0, field === "description" ? 500 : 4000) });
     }
@@ -156,17 +163,17 @@ export function CreateWizard({ catalog, icons, initialMode }: { catalog: Catalog
       setStep(1);
       return setError("Dê um nome ao projeto para continuar.");
     }
-    const skipScreens = !spec.frontend && next === 4;
-    const target = skipScreens ? (next > step ? 5 : 3) : next;
+    const skipScreens = !spec.frontend && next === 5;
+    const target = skipScreens ? (next > step ? 6 : 4) : next;
     setStep(target);
-    if (target === 5) void review();
+    if (target === 6) void review();
   }
 
   return (
     <div className="grid gap-6 lg:grid-cols-[220px_1fr]">
       <ol className="flex gap-1 overflow-x-auto lg:flex-col" aria-label="Etapas">
         {STEPS.map((label, i) => {
-          const disabled = i === 4 && !spec.frontend;
+          const disabled = i === 5 && !spec.frontend;
           return (
             <li key={label}>
               <button
@@ -240,6 +247,10 @@ export function CreateWizard({ catalog, icons, initialMode }: { catalog: Catalog
                   </Button>
                   <span className="text-xs text-muted">O texto é enviado ao provedor de IA do NOVA para gerar a proposta.</span>
                 </div>
+                <SketchUpload onResult={(s) => {
+                  const names = s.screens.map((x) => x.name);
+                  update({ screens: names, screenSpecs: s.screens, entities: s.entities.length ? s.entities : spec.entities });
+                }} />
                 {proposal && (
                   <div className="mt-4 flex flex-col gap-3">
                     {proposal.notice && <Alert tone="info">{proposal.notice}</Alert>}
@@ -383,6 +394,7 @@ export function CreateWizard({ catalog, icons, initialMode }: { catalog: Catalog
                 </div>
               )}
             </Card>
+            <StackComparison spec={spec} />
           </>
         )}
 
@@ -443,17 +455,28 @@ export function CreateWizard({ catalog, icons, initialMode }: { catalog: Catalog
           </>
         )}
 
-        {step === 4 && spec.frontend && (
-          <Card>
-            <Title icon="screens" title="Telas" intro="Liste as telas do app. Cada uma vira uma rota inicial no frontend." />
-            <ScreensEditor screens={spec.screens} onChange={(screens) => update({ screens })} />
-            <div className="mt-3">
-              <AiButton busy={busy === "screens"} onClick={() => assist("screens")} label="Sugerir telas com IA" />
-            </div>
-          </Card>
+        {step === 4 && (
+          <DomainStep spec={spec} onChange={update} backendId={spec.backend.id} />
         )}
 
-        {step === 5 && (
+        {step === 5 && spec.frontend && (
+          <>
+            <Card>
+              <Title icon="screens" title="Telas" intro={spec.frontend.id === "react-vite"
+                ? "Liste as telas do app. No React com Vite elas aparecem como lista na página inicial; as rotas por tela são geradas no Next.js."
+                : "Cada tela vira uma rota. Escolha o modelo e a entidade: lista, detalhe e formulário já saem ligados à API."} />
+              <ScreenSpecsEditor specs={spec.screenSpecs ?? spec.screens.map((name) => ({ name, template: "BLANK" as const, inMenu: true }))}
+                entities={(spec.entities ?? []).map((e) => e.name)} auth={spec.features.includes("auth")}
+                onChange={(screenSpecs) => update({ screenSpecs, screens: screenSpecs.map((s) => s.name) })} />
+              <div className="mt-3">
+                <AiButton busy={busy === "screens"} onClick={() => assist("screens")} label="Sugerir telas com IA" />
+              </div>
+            </Card>
+            <ThemeEditor theme={spec.theme ?? { primary: "#1554F0", font: "system", radius: "MD", density: "COMFORTABLE" }} onChange={(theme) => update({ theme })} />
+          </>
+        )}
+
+        {step === 6 && (
           <ReviewStep plan={plan} loading={busy === "plan"} icons={icons} catalog={catalog} buildToolName={buildTool?.name ?? ""} />
         )}
 
@@ -461,7 +484,7 @@ export function CreateWizard({ catalog, icons, initialMode }: { catalog: Catalog
           <Button variant="secondary" icon="chevronLeft" onClick={() => goTo(step - 1)} disabled={step === 0}>
             Voltar
           </Button>
-          {step < 5 ? (
+          {step < 6 ? (
             step > 0 && (
               <Button onClick={() => goTo(step + 1)}>
                 Continuar <NovaIcon name="chevronRight" size={16} />
@@ -650,52 +673,6 @@ function PackageCard({
         );
       })}
     </Card>
-  );
-}
-
-function ScreensEditor({ screens, onChange }: { screens: string[]; onChange: (s: string[]) => void }) {
-  const [draft, setDraft] = useState("");
-  function add() {
-    const name = draft.trim();
-    if (name && !screens.includes(name) && screens.length < 30) onChange([...screens, name]);
-    setDraft("");
-  }
-  return (
-    <div className="flex flex-col gap-3">
-      <div className="flex gap-2">
-        <Input
-          aria-label="Nome da tela"
-          placeholder="Ex.: Produtos"
-          value={draft}
-          maxLength={60}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              add();
-            }
-          }}
-        />
-        <Button variant="secondary" onClick={add}>
-          Adicionar
-        </Button>
-      </div>
-      {screens.length === 0 ? (
-        <p className="text-sm text-muted">Nenhuma tela ainda. O frontend é gerado só com a página inicial.</p>
-      ) : (
-        <ol className="flex flex-col gap-2">
-          {screens.map((s, i) => (
-            <li key={s} className="flex items-center gap-3 rounded-lg border border-border px-3 py-2 text-sm">
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-surface-2 text-xs font-bold">{i + 1}</span>
-              <span className="flex-1">{s}</span>
-              <button aria-label={`Remover ${s}`} onClick={() => onChange(screens.filter((x) => x !== s))} className="rounded p-1 text-muted hover:bg-surface-2 hover:text-danger">
-                <NovaIcon name="trash" size={16} />
-              </button>
-            </li>
-          ))}
-        </ol>
-      )}
-    </div>
   );
 }
 

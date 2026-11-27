@@ -5,7 +5,12 @@ import { backendFetch, setPreferenceCookies, setSessionCookies, type TokenRespon
 export async function POST(request: Request) {
   const blocked = rejectCrossOrigin(request);
   if (blocked) return blocked;
-  const result = await backendFetch<TokenResponse>("auth/register", { method: "POST", body: await request.text() });
+  const result = await backendFetch<TokenResponse>("auth/register", {
+    method: "POST",
+    body: await request.text(),
+    // O navegador da pessoa identifica a sessão em Configurações > Sessões.
+    headers: { "User-Agent": request.headers.get("user-agent") ?? "" },
+  });
   if (!result.ok) return NextResponse.json(result.problem, { status: result.status });
   const response = NextResponse.json({ user: result.data.user }, { status: 201 });
   setSessionCookies(response, result.data);

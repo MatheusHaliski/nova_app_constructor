@@ -23,6 +23,10 @@ final class DomainSuggestions {
     private static final Set<String> BLANK = Set.of("carrinho", "cart", "busca", "search", "pesquisa", "sobre", "about", "contato", "contact", "ajuda",
             "help", "faq", "termo", "privacidade", "politica", "checkout", "pagamento", "mapa");
 
+    /** Nomes de tela que falam do mesmo dado com outra palavra (ex.: Agenda e Novo agendamento → Agendamento). */
+    private static final Map<String, String> SYNONYMS = Map.of("agenda", "agendamento", "catalogo", "produto", "vitrine", "produto", "estoque", "produto",
+            "cardapio", "produto", "blog", "publicacao", "noticia", "publicacao", "artigo", "publicacao", "post", "publicacao");
+
     private DomainSuggestions() {}
 
     record Result(List<EntitySpec> entities, List<ScreenSpec> screens, List<Requirement> requirements) {}
@@ -68,7 +72,8 @@ final class DomainSuggestions {
                 if (subject.isEmpty()) {
                     template = "BLANK";
                 } else {
-                    entity = Names.pascal(String.join(" ", subject.stream().map(Names::singular).toList()));
+                    String joined = String.join(" ", subject.stream().map(Names::singular).toList());
+                    entity = Names.pascal(SYNONYMS.getOrDefault(Names.normalize(joined), joined));
                     String key = Names.key(String.join("", subject));
                     final String entityName = entity;
                     entities.computeIfAbsent(entity, k -> new EntitySpec(entityName, fields(key)));

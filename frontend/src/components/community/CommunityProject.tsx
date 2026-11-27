@@ -49,6 +49,7 @@ export function CommunityProject({
   const [busy, setBusy] = useState(false);
   const [reporting, setReporting] = useState<{ commentId: number | null } | null>(null);
   const [confirmFork, setConfirmFork] = useState(false);
+  const [suggesting, setSuggesting] = useState(false);
 
   const visible = useMemo(() => tree.filter((f) => f.path.toLowerCase().includes(filter.trim().toLowerCase())), [tree, filter]);
   const fail = (text: string) => setMessage({ tone: "danger", text });
@@ -143,9 +144,17 @@ export function CommunityProject({
                   <NovaIcon name="sliders" size={16} /> Gerenciar
                 </Link>
               ) : (
-                <Button variant="secondary" icon="git" disabled={forkBlocked} title={forkBlocked ? "O autor reservou todos os direitos." : undefined} onClick={() => setConfirmFork(true)}>
-                  Fork · {card.forks}
-                </Button>
+                <>
+                  <Button variant="secondary" icon="git" disabled={forkBlocked} title={forkBlocked ? "O autor reservou todos os direitos." : undefined} onClick={() => setConfirmFork(true)}>
+                    Fork · {card.forks}
+                  </Button>
+                  {!forkBlocked && (
+                    <Link href={`/novo-app?remix=${card.id}`} className="inline-flex items-center gap-2 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-semibold hover:bg-surface-2">
+                      <NovaIcon name="sparkle" size={16} /> Remixar
+                    </Link>
+                  )}
+                  <Button variant="secondary" icon="form" onClick={() => setSuggesting(true)}>Sugerir alteração</Button>
+                </>
               )}
             </>
           )}
@@ -261,6 +270,14 @@ export function CommunityProject({
         </Modal>
       )}
 
+      {suggesting && (
+        <SuggestDialog apiBase={apiBase} file={file && !file.binary ? file : null} onClose={() => setSuggesting(false)}
+          onDone={() => {
+            setSuggesting(false);
+            setMessage({ tone: "success", text: "Sugestão enviada. O dono do projeto revisa na aba Melhorias e você é avisado se ela for aplicada." });
+          }} />
+      )}
+
       {reporting && (
         <ReportDialog
           apiBase={apiBase}
@@ -312,6 +329,38 @@ function ReportDialog({ apiBase, commentId, onClose, onDone }: { apiBase: string
           <Button type="submit" disabled={!reason}>
             Enviar denúncia
           </Button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+function SuggestDialog({ apiBase, file, onClose, onDone }: { apiBase: string; file: FileContent | null; onClose: () => void; onDone: () => void }) {
+  const [title, setTitle] = useState("");
+  const [body, setBody] = useState("");
+  const [content, setContent] = useState(file?.content ?? "");
+  const [error, setError] = useState<string | null>(null);
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    const changed = file && content !== file.content;
+    const result = await call(`${apiBase}/suggestions`, "POST", { title, body, files: changed ? [{ path: file.path, content }] : [] });
+    if (result.ok) onDone();
+    else setError(errorText(result.problem));
+  }
+  return (
+    <Modal title="Sugerir alteração ao dono" onClose={onClose}>
+      <form onSubmit={submit} className="flex flex-col gap-3">
+        {error && <Alert tone="danger">{error}</Alert>}
+        <Field label="Título" htmlFor="sug-title"><Input id="sug-title" maxLength={120} value={title} onChange={(e) => setTitle(e.target.value)} /></Field>
+        <Field label="O que e por quê" htmlFor="sug-body"><Textarea id="sug-body" rows={3} maxLength={2000} value={body} onChange={(e) => setBody(e.target.value)} /></Field>
+        {file ? (
+          <Field label={`Alteração em ${file.path} (opcional)`} htmlFor="sug-content" hint="Edite o arquivo aberto; se não mudar nada, a sugestão vai só com o texto.">
+            <Textarea id="sug-content" rows={8} value={content} onChange={(e) => setContent(e.target.value)} className="font-mono text-xs" />
+          </Field>
+        ) : <p className="text-xs text-muted">Abra um arquivo antes para sugerir uma mudança no código dele.</p>}
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="secondary" onClick={onClose}>Cancelar</Button>
+          <Button type="submit" disabled={!title.trim() || !body.trim()}>Enviar sugestão</Button>
         </div>
       </form>
     </Modal>

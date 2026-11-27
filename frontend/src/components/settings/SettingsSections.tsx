@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { NovaIcon, type NovaIconName } from "@/components/icons/NovaIcon";
 import { Alert, Button, Card, Field, Input, LgpdTag, Textarea, Toggle } from "@/components/ui/ui";
 import type { Dict } from "@/lib/i18n";
@@ -59,7 +59,7 @@ function useFeedback() {
 
 function AccountSection({ settings, onSaved, t }: { settings: Settings; onSaved: (s: Settings) => void; t: Dict }) {
   const a = settings.account;
-  const [form, setForm] = useState({ name: a.name, username: a.username, bio: a.bio ?? "", birthDate: a.birthDate });
+  const [form, setForm] = useState({ name: a.name, username: a.username, bio: a.bio ?? "", birthDate: a.birthDate, websiteUrl: a.websiteUrl ?? "", githubUsername: a.githubUsername ?? "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [pending, setPending] = useState(false);
   const [emailOpen, setEmailOpen] = useState(false);
@@ -69,7 +69,7 @@ function AccountSection({ settings, onSaved, t }: { settings: Settings; onSaved:
     e.preventDefault();
     setPending(true);
     feedback.clear();
-    const result = await callMe("/account", "PUT", { ...form, bio: form.bio || null });
+    const result = await callMe("/account", "PUT", { ...form, bio: form.bio || null, websiteUrl: form.websiteUrl || null, githubUsername: form.githubUsername || null });
     setPending(false);
     if (result.ok) {
       onSaved(result.data);
@@ -82,7 +82,7 @@ function AccountSection({ settings, onSaved, t }: { settings: Settings; onSaved:
   }
 
   function reset() {
-    setForm({ name: a.name, username: a.username, bio: a.bio ?? "", birthDate: a.birthDate });
+    setForm({ name: a.name, username: a.username, bio: a.bio ?? "", birthDate: a.birthDate, websiteUrl: a.websiteUrl ?? "", githubUsername: a.githubUsername ?? "" });
     setErrors({});
     feedback.clear();
   }
@@ -135,6 +135,14 @@ function AccountSection({ settings, onSaved, t }: { settings: Settings; onSaved:
               <Textarea id="bio" maxLength={280} value={form.bio} onChange={(e) => setForm({ ...form, bio: e.target.value })} />
             </Field>
           </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            <Field label="Site ou portfólio" htmlFor="websiteUrl" error={errors.websiteUrl} hint="Aparece no seu perfil público, se ele estiver visível.">
+              <Input id="websiteUrl" type="url" maxLength={200} placeholder="https://" value={form.websiteUrl} onChange={(e) => setForm({ ...form, websiteUrl: e.target.value })} />
+            </Field>
+            <Field label="Usuário do GitHub" htmlFor="githubUsername" error={errors.githubUsername}>
+              <Input id="githubUsername" maxLength={39} value={form.githubUsername} onChange={(e) => setForm({ ...form, githubUsername: e.target.value })} />
+            </Field>
+          </div>
           <div className="flex flex-wrap gap-2">
             <Button type="submit" disabled={pending}>
               {pending ? t.common.saving : t.common.save}
@@ -146,6 +154,7 @@ function AccountSection({ settings, onSaved, t }: { settings: Settings; onSaved:
         </form>
       </Card>
       <PasswordCard t={t} />
+      <SessionsCard lastLoginAt={a.lastLoginAt} passwordChangedAt={a.passwordChangedAt} />
       {emailOpen && <EmailDialog t={t} onClose={() => setEmailOpen(false)} onSaved={onSaved} />}
     </div>
   );
@@ -653,5 +662,48 @@ function DeleteDialog({ t, onClose }: { t: Dict; onClose: () => void }) {
         </div>
       </form>
     </Dialog>
+  );
+}
+
+type Session = { id: string; device: string; startedAt: string; lastActiveAt: string; current: boolean };
+
+/** Sessões abertas da conta (segurança, LGPD art. 46): onde a conta está conectada e o botão de encerrar cada uma. */
+function SessionsCard({ lastLoginAt, passwordChangedAt }: { lastLoginAt: string | null; passwordChangedAt: string | null }) {
+  const [sessions, setSessions] = useState<Session[] | null>(null);
+  const feedback = useFeedback();
+  useEffect(() => {
+    let alive = true;
+    void callMe<Session[]>("/sessions", "GET").then((r) => {
+      if (alive && r.ok) setSessions(r.data);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+  async function end(id: string) {
+    const r = await callMe<null>(`/sessions/${id}`, "DELETE");
+    if (r.ok) {
+      setSessions((s) => (s ?? []).filter((x) => x.id !== id));
+      feedback.ok("Sessão encerrada.");
+    } else feedback.fail(r.problem, "Não foi possível encerrar.");
+  }
+  const when = (iso: string | null) => (iso ? new Date(iso).toLocaleString("pt-BR") : "—");
+  return (
+    <Card>
+      <SectionTitle icon="lock" title="Sessões e acessos" intro={`Último acesso: ${when(lastLoginAt)} · Senha trocada em: ${when(passwordChangedAt)}`} />
+      {sessions === null ? <p className="text-sm text-muted">Carregando…</p> : (
+        <ul className="flex flex-col gap-2">
+          {sessions.map((s) => (
+            <li key={s.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border px-3 py-2 text-sm">
+              <span>
+                <span className="font-semibold">{s.device}</span>{s.current && <span className="ml-2 text-xs font-semibold text-success">esta sessão</span>}
+                <span className="block text-xs text-muted">Desde {when(s.startedAt)} · última atividade {when(s.lastActiveAt)}</span>
+              </span>
+              {!s.current && <Button variant="secondary" onClick={() => end(s.id)}>Encerrar</Button>}
+            </li>
+          ))}
+        </ul>
+      )}
+    </Card>
   );
 }
