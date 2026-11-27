@@ -24,18 +24,21 @@ public class AuthController {
 
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
-    public TokenResponse register(@Valid @RequestBody RegisterRequest request) {
-        return auth.register(request);
+    public TokenResponse register(@Valid @RequestBody RegisterRequest request,
+                                  @org.springframework.web.bind.annotation.RequestHeader(value = "User-Agent", required = false) String userAgent) {
+        return auth.register(request, userAgent);
     }
 
     @PostMapping("/login")
-    public TokenResponse login(@Valid @RequestBody LoginRequest request) {
-        return auth.login(request);
+    public TokenResponse login(@Valid @RequestBody LoginRequest request,
+                               @org.springframework.web.bind.annotation.RequestHeader(value = "User-Agent", required = false) String userAgent) {
+        return auth.login(request, userAgent);
     }
 
     @PostMapping("/refresh")
-    public TokenResponse refresh(@Valid @RequestBody RefreshRequest request) {
-        return auth.refresh(request.refreshToken());
+    public TokenResponse refresh(@Valid @RequestBody RefreshRequest request,
+                                 @org.springframework.web.bind.annotation.RequestHeader(value = "User-Agent", required = false) String userAgent) {
+        return auth.refresh(request.refreshToken(), userAgent);
     }
 
     @PostMapping("/logout")

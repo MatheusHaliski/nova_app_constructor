@@ -152,6 +152,11 @@ public class ProjectService {
         return new ChangeResult(writeVersion(project, baseVersion + 1, label, origin, ownerId, files), warnings);
     }
 
+    @Transactional
+    public void markOpened(UUID ownerId, UUID id) {
+        projects.markOpened(id, ownerId, clock.instant());
+    }
+
     @Transactional(readOnly = true)
     public List<ProjectSummary> list(UUID ownerId, Project.Status status) {
         return projects.findByOwnerIdAndStatusOrderByUpdatedAtDesc(ownerId, status).stream().map(this::summary).toList();

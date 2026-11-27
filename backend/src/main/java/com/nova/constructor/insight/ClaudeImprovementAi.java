@@ -42,6 +42,38 @@ public class ClaudeImprovementAi implements ImprovementAi {
     }
 
     @Override
+    public Optional<Answer> ask(String question, java.util.List<String> tree, Map<String, String> files) {
+        StringBuilder user = new StringBuilder("# Pergunta\n").append(question).append("\n\n# Arquivos do projeto\n").append(String.join("\n", tree)).append('\n');
+        for (Map.Entry<String, String> f : files.entrySet()) {
+            user.append("\n## ").append(f.getKey()).append("\n```\n").append(numbered(f.getValue())).append("\n```\n");
+        }
+        StructuredMessageCreateParams<Answer> params = MessageCreateParams.builder()
+                .model(model)
+                .maxTokens(8000L)
+                .system("""
+                        Você responde perguntas sobre um projeto de software gerado pelo NOVA, em português do Brasil, para quem pode \
+                        estar aprendendo. Use só o código enviado; se ele não basta, diga o que falta. Aponte arquivo e linha de cada coisa \
+                        que citar. Não invente arquivos.""")
+                .outputConfig(Answer.class)
+                .addUserMessage(user.toString())
+                .build();
+        StructuredMessage<Answer> message = client.messages().create(params);
+        if (message.stopReason().filter(reason -> reason.equals(StopReason.REFUSAL) || reason.equals(StopReason.MAX_TOKENS)).isPresent()) {
+            return Optional.empty();
+        }
+        return message.content().stream().flatMap(block -> block.text().stream()).map(text -> text.text()).findFirst();
+    }
+
+    private static String numbered(String text) {
+        String[] lines = text.split("\n", -1);
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < lines.length; i++) {
+            sb.append(i + 1).append(": ").append(lines[i]).append('\n');
+        }
+        return sb.toString();
+    }
+
+    @Override
     public Optional<Result> apply(Request r) {
         StringBuilder user = new StringBuilder("# Melhoria\n").append(r.title()).append("\n\n## Por quê\n").append(r.why()).append('\n');
         if (r.howTo() != null) {

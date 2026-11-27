@@ -20,7 +20,11 @@ public final class SettingsDtos {
 
     public static final String LANGUAGE_RULE = "^(pt-BR|en-US|es-ES)$";
 
-    public record Account(String name, String username, String email, boolean emailVerified, LocalDate birthDate, String bio) {}
+    public record Account(String name, String username, String email, boolean emailVerified, LocalDate birthDate, String bio,
+                          String websiteUrl, String githubUsername, Instant lastLoginAt, Instant passwordChangedAt) {}
+
+    /** Sessão aberta (família de refresh tokens): onde e quando a conta está conectada. */
+    public record Session(String id, String device, Instant startedAt, Instant lastActiveAt, boolean current) {}
 
     public record ConsentState(boolean granted, Instant updatedAt) {}
 
@@ -38,7 +42,9 @@ public final class SettingsDtos {
             @NotBlank(message = "Escolha um nome de usuário.")
             @Pattern(regexp = AuthDtos.USERNAME_RULE, message = "Use de 3 a 30 letras minúsculas, números, ponto ou sublinhado.") String username,
             @Size(max = 280, message = "A biografia pode ter até 280 caracteres.") String bio,
-            @NotNull(message = "Informe sua data de nascimento.") @Past(message = "Data inválida.") LocalDate birthDate) {}
+            @NotNull(message = "Informe sua data de nascimento.") @Past(message = "Data inválida.") LocalDate birthDate,
+            @Size(max = 200) @Pattern(regexp = "^$|^https?://[^\\s]{3,190}$", message = "Informe um endereço que comece com http:// ou https://.") String websiteUrl,
+            @Pattern(regexp = "^$|^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$", message = "Nome de usuário do GitHub inválido.") String githubUsername) {}
 
     /** Troca de e-mail exige a senha atual (reautenticação). */
     public record EmailChange(

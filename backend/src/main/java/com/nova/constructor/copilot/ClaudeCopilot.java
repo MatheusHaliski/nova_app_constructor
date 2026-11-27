@@ -42,6 +42,33 @@ public class ClaudeCopilot {
         return message.content().stream().flatMap(block -> block.text().stream()).map(text -> text.text()).findFirst();
     }
 
+    /** Lê um esboço de tela (imagem) e devolve telas, dados e elementos. */
+    public Optional<CopilotDraft.SketchDraft> sketch(byte[] image, String mediaType, String hint) {
+        var source = com.anthropic.models.messages.Base64ImageSource.builder()
+                .data(java.util.Base64.getEncoder().encodeToString(image))
+                .mediaType(com.anthropic.models.messages.Base64ImageSource.MediaType.of(mediaType))
+                .build();
+        StructuredMessageCreateParams<CopilotDraft.SketchDraft> params = MessageCreateParams.builder()
+                .model(model)
+                .maxTokens(8000L)
+                .system("""
+                        Você é o Copilot do NOVA. A pessoa enviou a foto de um desenho de tela ou o print de outro app. Descreva as telas \
+                        que vê como telas de um app novo: nome de cada tela, o modelo (LIST, DETAIL, FORM, DASHBOARD, LOGIN, SIGNUP, LANDING, \
+                        SETTINGS ou BLANK), os dados que ela mostra (entidades e campos) e os elementos. Não copie marca, logotipo nem textos \
+                        de outra empresa: descreva a estrutura. Responda em português do Brasil.""")
+                .outputConfig(CopilotDraft.SketchDraft.class)
+                .addUserMessageOfContentBlockParams(java.util.List.of(
+                        com.anthropic.models.messages.ContentBlockParam.ofImage(source),
+                        com.anthropic.models.messages.ContentBlockParam.ofText(hint == null || hint.isBlank()
+                                ? "Descreva as telas deste esboço." : "O que manter: " + hint)))
+                .build();
+        StructuredMessage<CopilotDraft.SketchDraft> message = client.messages().create(params);
+        if (message.stopReason().filter(reason -> reason.equals(StopReason.REFUSAL) || reason.equals(StopReason.MAX_TOKENS)).isPresent()) {
+            return Optional.empty();
+        }
+        return message.content().stream().flatMap(block -> block.text().stream()).map(text -> text.text()).findFirst();
+    }
+
     /** Sugestão de texto para um campo do formulário assistido. */
     public Optional<String> assist(String field, String idea, String name, String current) {
         String instruction = switch (field) {

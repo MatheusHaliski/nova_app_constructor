@@ -54,7 +54,7 @@ public final class Model {
 
     public enum Severity { GAP, SUGGESTION }
 
-    public enum Category { BUSINESS, TESTS, SECURITY, CONFIG, SCREENS }
+    public enum Category { BUSINESS, TESTS, SECURITY, PRIVACY, CONFIG, SCREENS, REVIEW }
 
     public record Option(String value, String label) {}
 
@@ -91,12 +91,36 @@ public final class Model {
     /** Resultado bruto da análise de uma versão. */
     public record Analysis(Stack stack, List<Layer> layers, List<Endpoint> endpoints, List<Resource> resources, List<Entity> entities,
                            List<Table> tables, List<Screen> screens, Dependencies dependencies, List<Stage> stages, List<Proposal> proposals,
-                           int fileCount, int testCount) {}
+                           int fileCount, int testCount, List<RequirementStatus> requirements, List<Flow> flows, List<PrivacyFinding> privacy,
+                           List<A11yFinding> accessibility) {}
+
+    /** Situação de um requisito do projeto, com o que no código o atende. */
+    public record RequirementStatus(String text, String acceptance, String priority, String status, List<String> evidence, List<String> missing) {}
+
+    /** Caminho de uma rota pelas camadas: telas que a chamam → controller → serviços → repositório → entidade → tabela. */
+    public record Flow(String method, String path, List<String> screens, String controller, List<String> services, String repository, String entity,
+                       String table, String access) {}
+
+    /**
+     * Dado pessoal encontrado numa entidade.
+     *
+     * @param kind IDENTIFICATION, CONTACT, LOCATION, BIRTH ou SENSITIVE (art. 5º, II)
+     */
+    public record PrivacyFinding(String entity, String field, String kind, boolean publicRead, List<String> articles, String advice) {}
+
+    public record A11yFinding(String file, int line, String rule, String message) {}
+
+    /** Caminho até publicar: etapas em ordem, com o que falta em cada uma. */
+    public record Readiness(int percent, List<ReadinessStep> steps) {}
+
+    public record ReadinessStep(String id, String label, boolean done, int pending, String next) {}
 
     /** Resposta de GET /insights. */
     public record Insights(int version, Instant analyzedAt, Stack stack, List<Stage> stages, List<Layer> layers, List<Resource> resources,
                            List<Endpoint> endpoints, List<Entity> entities, List<Table> tables, List<Screen> screens, Dependencies dependencies,
-                           List<ProposalView> proposals, List<Applied> applied, boolean aiAvailable, int fileCount, int testCount) {}
+                           List<ProposalView> proposals, List<Applied> applied, boolean aiAvailable, int fileCount, int testCount,
+                           List<RequirementStatus> requirements, List<Flow> flows, List<PrivacyFinding> privacy, List<A11yFinding> accessibility,
+                           Readiness readiness) {}
 
     public enum ChangeAction { NEW, EDIT }
 
@@ -111,7 +135,8 @@ public final class Model {
 
     public record PreviewPage(String route, String file, String title, List<String> apiCalls, boolean handlesEmpty, boolean handlesError) {}
 
-    public record Mock(String method, String path, Object body) {}
+    /** @param access quem pode chamar (PUBLIC, AUTHENTICATED…): a prévia usa para simular visitante e pessoa logada */
+    public record Mock(String method, String path, Object body, String access) {}
 
     /** Material para a prévia das telas no navegador: código da versão (com as edições manuais) e respostas de exemplo da API. */
     public record PreviewBundle(int version, String framework, String root, List<PreviewPage> pages, Map<String, String> sources,

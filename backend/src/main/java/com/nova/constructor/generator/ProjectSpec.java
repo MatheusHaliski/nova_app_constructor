@@ -75,6 +75,12 @@ public record ProjectSpec(
         return requirements == null ? List.of() : requirements;
     }
 
+    /** Mesma especificação com outro backend (usado para comparar stacks). */
+    public ProjectSpec withBackend(Backend newBackend) {
+        return new ProjectSpec(name, description, objective, type, mode, newBackend, frontend, database, connectors, ai, features, screens,
+                entities, screenSpecs, requirements, theme);
+    }
+
     /** Mesma especificação com outros recursos (usado pelas melhorias que geram CI e Docker). */
     public ProjectSpec withFeatures(List<String> newFeatures) {
         return new ProjectSpec(name, description, objective, type, mode, backend, frontend, database, connectors, ai, newFeatures, screens,

@@ -39,9 +39,19 @@ public class ConsentEvent {
     @Column(name = "occurred_at", nullable = false)
     private Instant occurredAt;
 
+    /** Versão da política em vigor quando a escolha foi feita (LGPD, art. 8º, § 2º). */
+    @Column(name = "policy_version", length = 20)
+    private String policyVersion;
+
+    /** Onde a escolha foi feita (ex.: SETTINGS). */
+    @Column(name = "channel", length = 20)
+    private String channel;
+
     protected ConsentEvent() {}
 
-    public ConsentEvent(UUID userId, ConsentPurpose purpose, boolean granted, Instant occurredAt) {
+    public ConsentEvent(UUID userId, ConsentPurpose purpose, boolean granted, Instant occurredAt, String policyVersion, String channel) {
+        this.policyVersion = policyVersion;
+        this.channel = channel;
         this.userId = userId;
         this.purpose = purpose;
         this.granted = granted;
@@ -51,4 +61,8 @@ public class ConsentEvent {
     public ConsentPurpose getPurpose() { return purpose; }
     public boolean isGranted() { return granted; }
     public Instant getOccurredAt() { return occurredAt; }
+
+    public String getPolicyVersion() { return policyVersion; }
+
+    public String getChannel() { return channel; }
 }

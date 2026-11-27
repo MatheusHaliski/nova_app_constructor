@@ -21,12 +21,22 @@ public class GeneratorController {
     private final GeneratorService generator;
     private final ProjectService projects;
 
-    public GeneratorController(GeneratorService generator, ProjectService projects) {
+    private final com.nova.constructor.catalog.CatalogService catalog;
+
+    public GeneratorController(GeneratorService generator, ProjectService projects, com.nova.constructor.catalog.CatalogService catalog) {
+        this.catalog = catalog;
         this.generator = generator;
         this.projects = projects;
     }
 
     /** Revisão antes de gerar: pacotes, plugins, variáveis, comandos de compilação e a lista de arquivos. */
+    /** A mesma ideia em cada backend disponível, para escolher com dados: arquivos, pastas, dependências e o que cada um exige. */
+    @PostMapping("/compare")
+    public java.util.List<GeneratorService.StackComparison> compare(@Valid @RequestBody ProjectSpec spec) {
+        return generator.compare(spec, catalog.get().backends().stream().filter(com.nova.constructor.catalog.Catalog.Stack::available)
+                .map(com.nova.constructor.catalog.Catalog.Stack::id).toList());
+    }
+
     @PostMapping("/plan")
     public GenerationPlan plan(@Valid @RequestBody ProjectSpec spec) {
         return generator.generate(spec).plan();

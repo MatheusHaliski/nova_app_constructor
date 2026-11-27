@@ -46,7 +46,7 @@ public class AuthService {
     }
 
     @Transactional
-    public TokenResponse register(RegisterRequest request) {
+    public TokenResponse register(RegisterRequest request, String userAgent) {
         Instant now = clock.instant();
         String email = normalizeEmail(request.email());
         if (Period.between(request.birthDate(), LocalDate.now(clock)).getYears() < MINIMUM_AGE) {
@@ -60,12 +60,13 @@ public class AuthService {
         }
         User user = new User(request.name().trim(), request.username(), email, request.birthDate(),
                 passwordEncoder.encode(request.password()), Set.of(Role.USER), props.termsVersion(), now);
+        user.registerSuccessfulLogin(now);
         users.save(user);
-        return issue(user, UUID.randomUUID(), now);
+        return issue(user, UUID.randomUUID(), now, userAgent);
     }
 
     @Transactional(noRollbackFor = ApiException.class)
-    public TokenResponse login(LoginRequest request) {
+    public TokenResponse login(LoginRequest request, String userAgent) {
         Instant now = clock.instant();
         User user = users.findByEmail(normalizeEmail(request.email()))
                 .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, INVALID_LOGIN));
@@ -79,13 +80,13 @@ public class AuthService {
         if (!user.isEnabled()) {
             throw new ApiException(HttpStatus.FORBIDDEN, "Conta desativada. Fale com o suporte.");
         }
-        user.registerSuccessfulLogin();
-        return issue(user, UUID.randomUUID(), now);
+        user.registerSuccessfulLogin(clock.instant());
+        return issue(user, UUID.randomUUID(), now, userAgent);
     }
 
     /** Troca o refresh token por um novo (rotação). Reuso de token já trocado revoga a família inteira. */
     @Transactional(noRollbackFor = ApiException.class)
-    public TokenResponse refresh(String refreshToken) {
+    public TokenResponse refresh(String refreshToken, String userAgent) {
         Instant now = clock.instant();
         RefreshToken current = refreshTokens.findByTokenHash(TokenService.hash(refreshToken))
                 .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "Sessão expirada. Faça login novamente."));
@@ -100,7 +101,8 @@ public class AuthService {
                 .filter(User::isEnabled)
                 .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "Sessão expirada. Faça login novamente."));
         current.revoke(now);
-        return issue(user, current.getFamilyId(), now);
+        current.markUsed(now);
+        return issue(user, current.getFamilyId(), now, userAgent);
     }
 
     @Transactional
@@ -109,8 +111,8 @@ public class AuthService {
                 .ifPresent(t -> refreshTokens.revokeFamily(t.getFamilyId(), clock.instant()));
     }
 
-    private TokenResponse issue(User user, UUID familyId, Instant now) {
-        return new TokenResponse(tokens.accessToken(user, now), tokens.newRefreshToken(user, familyId, now),
+    private TokenResponse issue(User user, UUID familyId, Instant now, String userAgent) {
+        return new TokenResponse(tokens.accessToken(user, familyId, now), tokens.newRefreshToken(user, familyId, now, userAgent),
                 "Bearer", tokens.accessTokenSeconds(), UserResponse.from(user));
     }
 

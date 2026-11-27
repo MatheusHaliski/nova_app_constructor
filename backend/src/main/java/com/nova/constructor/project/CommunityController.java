@@ -38,7 +38,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1")
 public class CommunityController {
 
-    public record NewLink(Integer expiresInDays) {}
+    public record NewLink(Integer expiresInDays, String label) {}
 
     public record NewComment(String body) {}
 
@@ -49,8 +49,10 @@ public class CommunityController {
     private final SharingService sharing;
     private final CommunityService community;
     private final NotificationService notifications;
+    private final NetworkService network;
 
-    public CommunityController(SharingService sharing, CommunityService community, NotificationService notifications) {
+    public CommunityController(SharingService sharing, CommunityService community, NotificationService notifications, NetworkService network) {
+        this.network = network;
         this.sharing = sharing;
         this.community = community;
         this.notifications = notifications;
@@ -71,7 +73,7 @@ public class CommunityController {
     @PostMapping("/projects/{id}/sharing/links")
     @ResponseStatus(HttpStatus.CREATED)
     public CreatedLink createLink(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, @RequestBody(required = false) NewLink body) {
-        return sharing.createLink(id(jwt), id, body == null ? null : body.expiresInDays());
+        return sharing.createLink(id(jwt), id, body == null ? null : body.expiresInDays(), body == null ? null : body.label());
     }
 
     @DeleteMapping("/projects/{id}/sharing/links/{linkId}")
@@ -150,6 +152,29 @@ public class CommunityController {
     @ResponseStatus(HttpStatus.CREATED)
     public void report(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, @RequestBody NewReport body) {
         community.report(id(jwt), id, body.commentId(), body.reason(), body.details());
+    }
+
+    @GetMapping("/community/projects/{id}/remix")
+    public NetworkService.Remix remix(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
+        return network.remix(id(jwt), id);
+    }
+
+    @PostMapping("/community/projects/{id}/suggestions")
+    @ResponseStatus(HttpStatus.CREATED)
+    public Map<String, Long> suggest(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, @RequestBody NetworkService.NewSuggestion body) {
+        return Map.of("id", network.suggest(id(jwt), id, body));
+    }
+
+    @GetMapping("/people/{username}")
+    public NetworkService.Profile profile(@AuthenticationPrincipal Jwt jwt, @PathVariable String username) {
+        return network.profile(id(jwt), username);
+    }
+
+    public record Pins(List<UUID> projectIds) {}
+
+    @PutMapping("/me/pinned-projects")
+    public List<String> pin(@AuthenticationPrincipal Jwt jwt, @RequestBody Pins body) {
+        return network.pin(id(jwt), body.projectIds());
     }
 
     // ---- link de compartilhamento (sem login) ----

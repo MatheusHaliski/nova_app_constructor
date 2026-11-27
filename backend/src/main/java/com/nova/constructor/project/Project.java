@@ -96,6 +96,10 @@ public class Project {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
+    /** Última vez que o dono abriu o projeto (painel "continue de onde parou"). */
+    @Column(name = "last_opened_at")
+    private Instant lastOpenedAt;
+
     protected Project() {}
 
     public Project(UUID ownerId, String name, String slug, String description, String type, String specJson) {
@@ -131,6 +135,7 @@ public class Project {
     public Instant getTrashedAt() { return trashedAt; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
+    public Instant getLastOpenedAt() { return lastOpenedAt; }
 
     public Visibility getVisibility() { return visibility; }
     public License getLicense() { return license; }

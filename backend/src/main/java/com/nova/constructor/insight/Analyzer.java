@@ -48,9 +48,13 @@ public class Analyzer {
         Map<String, String> files = ctx.src().all();
         Facts facts = ctx.facts();
         Dependencies deps = CommonReader.dependencies(ctx.src(), spec == null ? List.of() : spec.connectorsOrEmpty(), CommonReader.env(ctx.src()));
-        List<Proposal> proposals = improvements.detect(ctx, deps);
+        List<Proposal> proposals = new ArrayList<>(improvements.detect(ctx, deps));
+        List<Model.PrivacyFinding> privacy = Extras.privacy(ctx);
+        List<Model.A11yFinding> a11y = Extras.accessibility(ctx);
+        proposals.addAll(Extras.privacyProposals(ctx, privacy));
+        proposals.addAll(Extras.a11yProposals(a11y));
         return new Analysis(ctx.stack(), layers(facts), facts.endpoints, ctx.resources(), facts.entities, facts.tables, facts.screens, deps,
-                stages(ctx, proposals), proposals, files.size(), facts.testCount);
+                stages(ctx, proposals, privacy), proposals, files.size(), facts.testCount, Extras.requirements(ctx), Extras.flows(ctx), privacy, a11y);
     }
 
     Context context(ProjectSpec spec, Map<String, String> files) {
@@ -186,7 +190,7 @@ public class Analyzer {
         return layers;
     }
 
-    private static List<Stage> stages(Context ctx, List<Proposal> proposals) {
+    private static List<Stage> stages(Context ctx, List<Proposal> proposals, List<Model.PrivacyFinding> privacy) {
         List<Stage> stages = new ArrayList<>();
         Sources src = ctx.src();
         List<String> missing = new ArrayList<>();
@@ -211,6 +215,8 @@ public class Analyzer {
                 ctx.facts().testCount + (ctx.facts().testCount == 1 ? " arquivo de teste" : " arquivos de teste")));
         stages.add(stage("security", "Segurança", Category.SECURITY, proposals,
                 ctx.stack().auth() ? "Rotas protegidas por token; nenhum segredo nos arquivos" : "Nenhum segredo nos arquivos"));
+        stages.add(stage("privacy", "Privacidade (LGPD)", Category.PRIVACY, proposals,
+                privacy.isEmpty() ? "Nenhum dado pessoal nas entidades" : privacy.size() + " dados pessoais, nenhum exposto sem login"));
         stages.add(stage("business", "Regras do negócio", Category.BUSINESS, proposals,
                 ctx.resources().size() + " recursos na API · " + ctx.facts().entities.size() + " entidades"));
         if (ctx.stack().frontend() == null) {

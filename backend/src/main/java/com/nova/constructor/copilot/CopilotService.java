@@ -86,6 +86,37 @@ public class CopilotService {
         return new AssistResponse(rules.assist(field, idea, name), "regras", claude == null ? AI_NOT_CONFIGURED : AI_UNAVAILABLE);
     }
 
+    public record SketchResult(List<ProjectSpec.ScreenSpec> screens, List<ProjectSpec.EntitySpec> entities, List<String> elements, String notes,
+                               String source) {}
+
+    private static final java.util.Set<String> IMAGE_TYPES = java.util.Set.of("image/png", "image/jpeg", "image/webp", "image/gif");
+
+    /** Começar de um esboço: exige a IA configurada (ler imagem não tem versão por regras). */
+    public SketchResult sketch(byte[] image, String mediaType, String hint) {
+        if (claude == null) {
+            throw new ApiException(org.springframework.http.HttpStatus.CONFLICT, "Ler um esboço exige a IA do NOVA, que não está configurada neste ambiente.");
+        }
+        if (image == null || image.length == 0 || image.length > 5 * 1024 * 1024 || !IMAGE_TYPES.contains(mediaType)) {
+            throw new ApiException(org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT, "Envie uma imagem PNG, JPEG, WebP ou GIF de até 5 MB.");
+        }
+        try {
+            CopilotDraft.SketchDraft d = claude.sketch(image, mediaType, cut(hint, 300))
+                    .orElseThrow(() -> new ApiException(org.springframework.http.HttpStatus.UNPROCESSABLE_CONTENT, "A IA não conseguiu ler este esboço."));
+            List<ProjectSpec.ScreenSpec> screens = d.screens() == null ? List.of() : d.screens().stream().filter(s -> s.name() != null).limit(30)
+                    .map(s -> new ProjectSpec.ScreenSpec(cut(s.name(), 60), s.template(), blank(s.entity()) ? null : cut(s.entity(), 40), s.access(), null, null)).toList();
+            List<ProjectSpec.EntitySpec> entities = d.entities() == null ? List.of() : d.entities().stream().limit(8)
+                    .map(e -> new ProjectSpec.EntitySpec(cut(e.name(), 40), e.fields() == null ? List.of() : e.fields().stream().limit(10)
+                            .map(f -> new ProjectSpec.FieldSpec(cut(f.name(), 40), f.type(), f.required(), f.values() == null || f.values().isEmpty() ? null : f.values())).toList()))
+                    .toList();
+            return new SketchResult(screens, entities, d.elements() == null ? List.of() : d.elements(), d.notes(), "claude");
+        } catch (ApiException e) {
+            throw e;
+        } catch (RuntimeException e) {
+            log.warn("Copilot: esboço falhou: {}", e.toString());
+            throw new ApiException(org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE, "A IA não respondeu agora. Tente de novo.");
+        }
+    }
+
     /** Converte o rascunho em especificação e confere contra o catálogo; vazio se a IA escolheu algo inválido. */
     private Optional<Proposal> toProposal(CopilotDraft draft, String source, String notice) {
         Catalog c = catalog.get();

@@ -60,6 +60,22 @@ public class InsightsController {
         service.dismiss(owner(jwt), id, proposalId, false);
     }
 
+    @GetMapping("/compare")
+    public InsightsService.Comparison compare(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, @RequestParam int from, @RequestParam int to) {
+        return service.compare(owner(jwt), id, from, to);
+    }
+
+    @PostMapping("/improvements/{proposalId}/preview-bundle")
+    public PreviewBundle proposalBundle(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, @PathVariable String proposalId,
+                                        @RequestBody ImprovementRequest body) {
+        return service.proposalBundle(owner(jwt), id, proposalId, body);
+    }
+
+    @PostMapping("/ask")
+    public ImprovementAi.Answer ask(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, @RequestBody InsightsService.Question body) {
+        return service.ask(owner(jwt), id, body.question());
+    }
+
     @GetMapping("/preview-bundle")
     public PreviewBundle previewBundle(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, @RequestParam(required = false) Integer version) {
         return service.previewBundle(owner(jwt), id, version);

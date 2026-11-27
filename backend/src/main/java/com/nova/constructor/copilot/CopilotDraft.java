@@ -42,4 +42,11 @@ public record CopilotDraft(
     public record Story(
             @JsonPropertyDescription("Título curto da história") String title,
             @JsonPropertyDescription("História no formato: Como <pessoa>, quero <ação>, para <benefício>") String story) {}
+
+    /** Telas e dados lidos de um esboço (foto de desenho ou print). */
+    public record SketchDraft(
+            @JsonPropertyDescription("Telas vistas na imagem, na ordem de navegação") List<ScreenDraft> screens,
+            @JsonPropertyDescription("Dados que as telas mostram, como entidades") List<EntityDraft> entities,
+            @JsonPropertyDescription("Elementos de cada tela, um item por tela no formato 'Tela: elemento, elemento'") List<String> elements,
+            @JsonPropertyDescription("Observações sobre cores, layout e o que ficou ilegível, em português") String notes) {}
 }

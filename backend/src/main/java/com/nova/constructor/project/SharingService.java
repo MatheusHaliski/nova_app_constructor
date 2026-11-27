@@ -36,7 +36,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class SharingService {
 
-    public record LinkView(UUID id, Instant createdAt, Instant expiresAt, Instant lastUsedAt) {}
+    public record LinkView(UUID id, String label, Instant createdAt, Instant expiresAt, Instant lastUsedAt) {}
 
     public record CreatedLink(UUID id, String token, Instant expiresAt) {}
 
@@ -132,7 +132,11 @@ public class SharingService {
 
     /** Cria um link de compartilhamento; o token só aparece nesta resposta. */
     @Transactional
-    public CreatedLink createLink(UUID ownerId, UUID projectId, Integer expiresInDays) {
+    public CreatedLink createLink(UUID ownerId, UUID projectId, Integer expiresInDays, String label) {
+        String name = label == null || label.isBlank() ? null : label.strip();
+        if (name != null && name.length() > 60) {
+            throw new ApiException(HttpStatus.UNPROCESSABLE_CONTENT, "O nome do link vai até 60 caracteres.");
+        }
         Project project = load(ownerId, projectId);
         if (project.getVisibility() == Visibility.PRIVATE) {
             throw new ApiException(HttpStatus.CONFLICT, "Mude a visibilidade para “Link” (ou mais ampla) antes de criar um link.");
@@ -146,8 +150,8 @@ public class SharingService {
         UUID id = UUID.randomUUID();
         Instant now = clock.instant();
         Instant expires = expiresInDays == null ? null : now.plus(Duration.ofDays(expiresInDays));
-        jdbc.sql("insert into share_links (id, project_id, token_hash, expires_at, created_at) values (?, ?, ?, ?, ?)")
-                .params(id.toString(), projectId.toString(), hash(token), expires == null ? null : Timestamp.from(expires), Timestamp.from(now)).update();
+        jdbc.sql("insert into share_links (id, project_id, token_hash, expires_at, created_at, label) values (?, ?, ?, ?, ?, ?)")
+                .params(id.toString(), projectId.toString(), hash(token), expires == null ? null : Timestamp.from(expires), Timestamp.from(now), name).update();
         return new CreatedLink(id, token, expires);
     }
 
@@ -183,9 +187,9 @@ public class SharingService {
     }
 
     private SharingState state(Project project) {
-        List<LinkView> links = jdbc.sql("select id, created_at, expires_at, last_used_at from share_links where project_id = ? and revoked_at is null order by created_at desc")
+        List<LinkView> links = jdbc.sql("select id, label, created_at, expires_at, last_used_at from share_links where project_id = ? and revoked_at is null order by created_at desc")
                 .param(project.getId().toString())
-                .query((rs, n) -> new LinkView(UUID.fromString(rs.getString("id")), instant(rs.getTimestamp("created_at")),
+                .query((rs, n) -> new LinkView(UUID.fromString(rs.getString("id")), rs.getString("label"), instant(rs.getTimestamp("created_at")),
                         instant(rs.getTimestamp("expires_at")), instant(rs.getTimestamp("last_used_at"))))
                 .list();
         return new SharingState(project.getVisibility(), project.getLicense(), hiddenPaths(project.getId()), links, project.getPublishedAt());

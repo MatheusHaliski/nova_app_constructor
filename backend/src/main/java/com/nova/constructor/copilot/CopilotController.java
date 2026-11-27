@@ -37,4 +37,11 @@ public class CopilotController {
     public AssistResponse assist(@Valid @RequestBody AssistRequest request) {
         return copilot.assist(request.field(), request.idea(), request.name(), request.current());
     }
+
+    /** Começar de um esboço: foto de desenho ou print vira telas e dados. */
+    @PostMapping(path = "/sketch", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
+    public CopilotService.SketchResult sketch(@org.springframework.web.bind.annotation.RequestParam("image") org.springframework.web.multipart.MultipartFile image,
+                                              @org.springframework.web.bind.annotation.RequestParam(value = "hint", required = false) String hint) throws java.io.IOException {
+        return copilot.sketch(image.getBytes(), image.getContentType(), hint);
+    }
 }

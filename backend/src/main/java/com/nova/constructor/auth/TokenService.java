@@ -34,13 +34,15 @@ public class TokenService {
         this.refreshTokens = refreshTokens;
     }
 
-    public String accessToken(User user, Instant now) {
+    /** @param sessionId família do refresh token: identifica a sessão (claim sid) para listar e encerrar sessões */
+    public String accessToken(User user, UUID sessionId, Instant now) {
         JwtClaimsSet claims = JwtClaimsSet.builder()
                 .issuer(props.jwt().issuer())
                 .subject(user.getId().toString())
                 .issuedAt(now)
                 .expiresAt(now.plus(props.jwt().accessTokenTtl()))
                 .id(UUID.randomUUID().toString())
+                .claim("sid", sessionId.toString())
                 .claim("name", user.getName())
                 .claim("email", user.getEmail())
                 .claim("roles", user.getRoles().stream().map(Role::name).sorted().toList())
@@ -50,11 +52,11 @@ public class TokenService {
     }
 
     /** Cria e persiste um refresh token; retorna o valor em texto (só existe na resposta). */
-    public String newRefreshToken(User user, UUID familyId, Instant now) {
+    public String newRefreshToken(User user, UUID familyId, Instant now, String userAgent) {
         byte[] bytes = new byte[32];
         RANDOM.nextBytes(bytes);
         String value = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
-        refreshTokens.save(new RefreshToken(user.getId(), familyId, hash(value), now, now.plus(props.jwt().refreshTokenTtl())));
+        refreshTokens.save(new RefreshToken(user.getId(), familyId, hash(value), now, now.plus(props.jwt().refreshTokenTtl()), userAgent));
         return value;
     }
 
