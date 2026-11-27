@@ -500,21 +500,37 @@ public class InsightsService {
         return mocks;
     }
 
+    private static final String[] PEOPLE = {"Ana Souza", "Bruno Lima", "Carla Mendes", "Diego Rocha", "Elisa Prado", "Felipe Nunes", "Gabriela Costa"};
+    private static final String[] PRODUCTS = {"Kit Essencial", "Combo Família", "Edição Especial", "Plano Mensal", "Pacote Premium", "Item Clássico",
+            "Versão Compacta"};
+    private static final String[] TITLES = {"Boas-vindas à nova temporada", "Novidades da semana", "Guia rápido para começar", "Resultados do mês",
+            "Dicas para aproveitar melhor", "Agenda de eventos", "Perguntas frequentes"};
+    private static final String[] CITIES = {"São Paulo", "Recife", "Curitiba", "Belo Horizonte", "Porto Alegre", "Salvador", "Manaus"};
+    private static final String[] STREETS = {"Rua das Flores", "Avenida Brasil", "Rua da Praia", "Travessa do Sol", "Alameda Santos", "Rua Bela Vista",
+            "Avenida Atlântica"};
+    private static final String[] SENTENCES = {"Atende bem quem busca praticidade no dia a dia.", "Feito com cuidado e entregue no prazo combinado.",
+            "Indicado para quem está começando.", "Uma das escolhas mais pedidas pelos clientes.", "Disponível por tempo limitado.",
+            "Inclui suporte durante o primeiro mês.", "Pode ser combinado com outros itens."};
+
+    /** Dados de exemplo plausíveis em português, escolhidos pelo nome do campo e da entidade (sem IA, sempre os mesmos). */
     static Map<String, Object> sampleRow(Entity e, int i) {
         Map<String, Object> row = new LinkedHashMap<>();
+        String entity = Names.key(e.name());
+        boolean person = entity.matches(".*(client|usuari|pessoa|paciente|aluno|contato|funcionari|membro|autor|fornecedor|medic|professor).*");
+        boolean product = entity.matches(".*(produt|item|servic|plano|curso|livro|prato|oferta|imove|veicul|pacote).*");
+        int k = (i - 1) % 7;
+        String person0 = PEOPLE[k];
         for (Field f : e.fields()) {
             String n = Names.normalize(f.name());
             Object v = switch (f.kind()) {
-                case INTEGER, LONG -> f.id() ? i : i * 3;
-                case DECIMAL, DOUBLE -> new BigDecimal(i * 12 + ".90");
-                case BOOLEAN -> i % 2 == 1;
-                case DATE -> "2026-0" + i + "-1" + i;
-                case DATETIME, INSTANT -> "2026-0" + i + "-1" + i + "T10:30:00";
+                case INTEGER, LONG -> f.id() ? i : n.matches(".*(quantidade|estoque|qtd).*") ? 3 + i * 4 : n.matches(".*(idade).*") ? 24 + i * 3 : i * 3;
+                case DECIMAL, DOUBLE -> new BigDecimal(n.matches(".*(nota|avaliacao|rating).*") ? (3 + i % 3) + ".5" : (14 + i * 7) + ".90");
+                case BOOLEAN -> i % 3 != 0;
+                case DATE -> java.time.LocalDate.of(2026, 12, 1).plusDays(i * 3L).toString();
+                case DATETIME, INSTANT -> java.time.LocalDate.of(2026, 12, 1).plusDays(i * 2L) + "T" + (9 + i % 8) + ":30:00";
                 case UUID -> "00000000-0000-0000-0000-00000000000" + i;
                 case ENUM -> f.enumValues() == null || f.enumValues().isEmpty() ? "A" : f.enumValues().get((i - 1) % f.enumValues().size());
-                case TEXT, LONG_TEXT -> n.contains("email") ? "pessoa" + i + "@exemplo.com"
-                        : n.contains("telefone") || n.contains("phone") ? "(11) 9000" + i + "-000" + i
-                        : SpringReader.isStatusName(f.name()) ? "ATIVO" : SpringCode.label(f.name()) + " de exemplo " + i;
+                case TEXT, LONG_TEXT -> text(n, f, person, product, person0, e.name(), i, k);
                 default -> null;
             };
             if (v != null) {
@@ -523,6 +539,40 @@ public class InsightsService {
         }
         row.putIfAbsent("id", i);
         return row;
+    }
+
+    private static Object text(String n, Field f, boolean person, boolean product, String person0, String entity, int i, int k) {
+        if (n.contains("email")) {
+            return Names.normalize(person0.split(" ")[0]) + "." + Names.normalize(person0.split(" ")[1]) + "@exemplo.com";
+        }
+        if (n.matches(".*(telefone|celular|whatsapp|phone).*")) {
+            return "(11) 9" + (8100 + i * 37) + "-" + (4200 + i * 113);
+        }
+        if (n.matches(".*cpf.*")) {
+            return String.format("%03d.%03d.%03d-%02d", 123 + i, 456 + i, 789 + i, 10 + i);
+        }
+        if (n.matches(".*(cidade|city|municipio).*")) {
+            return CITIES[k];
+        }
+        if (n.matches(".*(endereco|logradouro|address|rua).*")) {
+            return STREETS[k] + ", " + (100 + i * 23);
+        }
+        if (n.matches(".*(cep).*")) {
+            return String.format("%05d-%03d", 1000 + i * 731, 100 + i);
+        }
+        if (SpringReader.isStatusName(f.name())) {
+            return i % 3 == 0 ? "INATIVO" : "ATIVO";
+        }
+        if (n.matches(".*(titulo|title|assunto).*")) {
+            return TITLES[k];
+        }
+        if (f.kind() == Model.FieldKind.LONG_TEXT || n.matches(".*(descricao|observacao|conteudo|resumo|bio|detalhe|comentario).*")) {
+            return SENTENCES[k];
+        }
+        if (n.matches(".*(nome|name)$|^nome.*") || n.matches(".*(cliente|paciente|responsavel|autor|aluno).*")) {
+            return person || !product && n.matches(".*(cliente|paciente|responsavel|autor|aluno).*") ? person0 : product ? PRODUCTS[k] : entity + " " + i;
+        }
+        return SpringCode.label(f.name()) + " " + i;
     }
 
     private static String cut(String s, int max) {

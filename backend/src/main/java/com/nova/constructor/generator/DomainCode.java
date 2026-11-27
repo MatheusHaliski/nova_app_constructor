@@ -92,7 +92,14 @@ final class DomainCode {
         Theme theme = spec.theme();
         if (theme != null) {
             String css = files.getOrDefault(root + "src/app/globals.css", "");
-            files.put(root + "src/app/globals.css", css + themeCss(theme));
+            String themed = themeCss(theme);
+            // @import de fonte só vale no topo do arquivo.
+            String fontImport = themed.lines().filter(l -> l.startsWith("@import url(")).findFirst().orElse(null);
+            if (fontImport != null) {
+                themed = themed.replace(fontImport + "\n", "");
+                css = fontImport + "\n" + css;
+            }
+            files.put(root + "src/app/globals.css", css + themed);
         }
         List<ScreenSpec> screens = spec.screenSpecsOrEmpty();
         if (screens.isEmpty()) {
@@ -183,7 +190,7 @@ final class DomainCode {
         }
     }
 
-    private static String themeCss(Theme t) {
+    static String themeCss(Theme t) {
         String radius = switch (t.radius()) {
             case "NONE" -> "0";
             case "SM" -> "4px";

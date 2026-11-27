@@ -129,7 +129,7 @@ function matchPath(pattern, path) {
   const a = pattern.split("/");
   const b = path.split("/");
   if (a.length !== b.length) return false;
-  return a.every((seg, i) => /^\{.+\}$/.test(seg) || /^\[.+\]$/.test(seg) || seg === b[i]);
+  return a.every((seg, i) => /^\{.+\}$/.test(seg) || /^\[.+\]$/.test(seg) || /^:.+/.test(seg) || seg === b[i]);
 }
 
 window.fetch = async (input, init = {}) => {
@@ -146,8 +146,23 @@ window.fetch = async (input, init = {}) => {
   if (method !== "GET") return role === "visitor" ? respond(401, { title: "Não autenticado" }) : respond(201, init.body ? JSON.parse(init.body) : {});
   if (!mock) return respond(404, { title: "Sem resposta de exemplo para " + url.pathname });
   if (view === "empty" && Array.isArray(mock.body)) return respond(200, []);
+  if (view === "many" && Array.isArray(mock.body) && mock.body.length) {
+    // Muitos itens: repete os exemplos até 30 linhas, com ids diferentes, para ver rolagem e paginação.
+    return respond(200, Array.from({ length: 30 }, (_, i) => ({ ...mock.body[i % mock.body.length], id: i + 1 })));
+  }
+  if (view === "long") return respond(200, lengthen(mock.body));
   return respond(200, mock.body);
 };
+
+/** Textos longos: estica cada texto para ver quebras de linha e cortes. */
+function lengthen(value) {
+  if (Array.isArray(value)) return value.map(lengthen);
+  if (value && typeof value === "object") return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, lengthen(v)]));
+  if (typeof value === "string" && !/^\d{4}-\d{2}-\d{2}/.test(value) && !/^[A-Z_]+$/.test(value)) {
+    return value + " — com um texto bem mais comprido do que o esperado, para conferir se a tela quebra a linha sem estourar o layout";
+  }
+  return value;
+}
 
 // ---------------------------------------------------------------- telas
 
@@ -180,11 +195,41 @@ function message(title, text) {
   return h("div", { style: { padding: 32, fontFamily: "system-ui, sans-serif", color: "#334155" } }, h("h2", null, title), h("p", null, text));
 }
 
+/** React com Vite: monta o App do projeto (src/App.tsx) com a rota definida pela prévia; o roteador gerado lê __NOVA_ROUTE__. */
+function drawVite() {
+  const state = host.state;
+  const root = state.root;
+  const css = Object.keys(state.sources).filter((p) => p.startsWith(root + "src/") && p.endsWith(".css"));
+  css.forEach(load);
+  const appPath = [root + "src/App.tsx", root + "src/App.jsx"].find((p) => state.sources[p] !== undefined);
+  if (!appPath) return message("Sem App", "O projeto não tem src/App.tsx.");
+  const mod = load(appPath);
+  const App = mod.App ?? mod.default;
+  return h(App, null);
+}
+
+window.addEventListener("popstate", () => {
+  if (host.state && host.state.framework === "react-vite" && window.__NOVA_ROUTE__ !== undefined) {
+    host.state.route = window.__NOVA_ROUTE__;
+    post({ type: "nova:navigate", href: window.__NOVA_ROUTE__ });
+  }
+});
+
 async function draw() {
   const state = host.state;
   host.cache.clear();
   host.styles = [];
   let element;
+  if (state.framework === "react-vite") {
+    window.__NOVA_ROUTE__ = state.route;
+    try {
+      element = drawVite();
+    } catch (e) {
+      element = message("A prévia não conseguiu montar esta tela", String(e && e.message ? e.message : e));
+      post({ type: "nova:error", message: String(e && e.message ? e.message : e) });
+    }
+    return mount(element);
+  }
   try {
     const found = findPage(state.route);
     if (!found) {
@@ -221,6 +266,10 @@ async function draw() {
       : message("A prévia não conseguiu montar esta tela", String(e && e.message ? e.message : e));
     post({ type: "nova:error", message: String(e && e.message ? e.message : e) });
   }
+  mount(element);
+}
+
+function mount(element) {
   let style = document.getElementById("nova-styles");
   if (!style) {
     style = document.createElement("style");
@@ -230,7 +279,7 @@ async function draw() {
   style.textContent = host.styles.join("\n");
   if (!host.root) host.root = createRoot(document.getElementById("root"));
   host.root.render(element);
-  post({ type: "nova:rendered", route: state.route, height: document.body.scrollHeight });
+  post({ type: "nova:rendered", route: host.state.route, height: document.body.scrollHeight });
 }
 
 // ---------------------------------------------------------------- edição direta
