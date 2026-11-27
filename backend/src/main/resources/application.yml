@@ -67,7 +67,8 @@ nova:
     cassandra:
       enabled: ${NOVA_CASSANDRA_ENABLED:false}
       url: ${NOVA_CASSANDRA_URL:localhost:9042}
-  # Copilot do NOVA. Sem ANTHROPIC_API_KEY, as sugestões vêm de regras simples.
+  # Copilot do NOVA. Sem chave, as sugestões vêm de regras simples. NOVA_ANTHROPIC_API_KEY tem prioridade sobre
+  # ANTHROPIC_API_KEY (as sessões de nuvem do Claude Code não repassam ANTHROPIC_API_KEY aos comandos).
   ai:
-    anthropic-api-key: ${ANTHROPIC_API_KEY:}
+    anthropic-api-key: ${NOVA_ANTHROPIC_API_KEY:${ANTHROPIC_API_KEY:}}
     model: ${NOVA_AI_MODEL:claude-opus-5-5}

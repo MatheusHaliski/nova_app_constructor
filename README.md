@@ -57,8 +57,10 @@ O Copilot, a ajuda por campo, a leitura de esboços, "perguntar ao projeto" e "a
 Sem chave, o Copilot cai para regras simples e as outras funções avisam que precisam da IA.
 
 1. Crie uma chave em console.anthropic.com (de preferência uma só para o NOVA, com limite de gasto).
-2. Defina `ANTHROPIC_API_KEY` no ambiente do backend (no `.env`, no Docker Compose ou nas variáveis de ambiente da
-   sessão de nuvem). `NOVA_AI_MODEL` troca o modelo (padrão: `claude-opus-5-5`).
+2. Defina `ANTHROPIC_API_KEY` no ambiente do backend (no `.env` ou no Docker Compose). Na sessão de nuvem do Claude
+   Code use `NOVA_ANTHROPIC_API_KEY`: lá `ANTHROPIC_API_KEY` não chega aos comandos, porque a própria sessão se
+   autentica pela conta da Anthropic. Se as duas existirem, vale `NOVA_ANTHROPIC_API_KEY`. `NOVA_AI_MODEL` troca o
+   modelo (padrão: `claude-opus-5-5`).
 3. Suba o backend e confira: `GET /api/v1/copilot/status` responde `provider: "claude"`.
 4. Rode a verificação real: `python3 scripts/testar_ia.py [http://localhost:8080] [esboco.png]`.
 

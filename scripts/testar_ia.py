@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Verificação real da IA do NOVA (Claude). Rode com o backend no ar e ANTHROPIC_API_KEY definida no ambiente dele:
+Verificação real da IA do NOVA (Claude). Rode com o backend no ar e ANTHROPIC_API_KEY (ou NOVA_ANTHROPIC_API_KEY) definida no ambiente dele:
 
     python3 scripts/testar_ia.py              # usa http://localhost:8080
     python3 scripts/testar_ia.py http://host:8080 caminho/da/imagem.png
